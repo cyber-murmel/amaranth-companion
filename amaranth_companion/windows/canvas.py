@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QGraphicsScene
-from PyQt5.QtGui import QColor, QPalette, QPen
-from PyQt5.QtCore import QLine
-from math import floor, ceil
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsView
+from PyQt5.QtGui import QPalette, QPen, QPainter
+from PyQt5.QtCore import QLine, Qt
+from math import floor
 
 
 class CanvasScene(QGraphicsScene):
@@ -53,7 +53,28 @@ class CanvasScene(QGraphicsScene):
             else:
                 lines_minor.append(line)
 
-        painter.setPen(self._pen_major)
-        painter.drawLines(*lines_major)
-        painter.setPen(self._pen_minor)
-        painter.drawLines(*lines_minor)
+        if lines_major:
+            painter.setPen(self._pen_major)
+            painter.drawLines(*lines_major)
+        if lines_minor:
+            painter.setPen(self._pen_minor)
+            painter.drawLines(*lines_minor)
+
+
+class CanvasView(QGraphicsView):
+    def __init__(self, parent, canvas_scene):
+        super().__init__(parent)
+
+        self.canvas_scene = canvas_scene
+
+        self.setRenderHints(
+            QPainter.Antialiasing
+            | QPainter.HighQualityAntialiasing
+            | QPainter.TextAntialiasing
+            | QPainter.SmoothPixmapTransform
+        )
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.setScene(self.canvas_scene)

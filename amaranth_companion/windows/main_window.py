@@ -6,10 +6,10 @@ from PyQt5.QtWidgets import (
     QMenu,
     QToolBar,
     QAction,
-    QGraphicsView,
+    QGraphicsItem,
 )
 from PyQt5.QtGui import QIcon, QKeySequence
-from .canvas import CanvasScene
+from .canvas import CanvasScene, CanvasView
 
 
 class MainWindow(QMainWindow):
@@ -27,12 +27,18 @@ class MainWindow(QMainWindow):
         self._createContextMenu()
         self._connectActions()
 
-        self.view = QGraphicsView(self)
-
         self.canvas_scene = CanvasScene()
+        self.canvas_view = CanvasView(self, self.canvas_scene)
 
-        self.view.setScene(self.canvas_scene)
-        self.setCentralWidget(self.view)
+        self.addDebugContent()
+
+        # self.view.setScene(self.canvas_scene)
+        self.setCentralWidget(self.canvas_view)
+
+    def addDebugContent(self):
+        rect = self.canvas_scene.addRect(-96, -96, 64, 32)
+        rect.setFlag(QGraphicsItem.ItemIsMovable)
+        rect.setFlag(QGraphicsItem.ItemIsSelectable)
 
     def _createMenuBar(self):
         menuBar = QMenuBar(self)
