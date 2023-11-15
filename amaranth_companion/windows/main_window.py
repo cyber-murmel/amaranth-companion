@@ -1,40 +1,15 @@
 from functools import partial
 
 from PyQt5.QtWidgets import (
-    QLabel,
     QMainWindow,
     QMenuBar,
     QMenu,
     QToolBar,
     QAction,
-    QScrollArea,
-    QGroupBox,
-    QVBoxLayout,
-    QWidget,
+    QGraphicsView,
 )
-from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QIcon, QKeySequence
-
-
-class DraggableLabel(QLabel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMouseTracking(True)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.drag_start_position = event.pos()
-            self._pos = self.pos()
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
-            delta = event.pos() - self.drag_start_position
-            self._pos += delta
-            # self.move(self._pos)
-            self.move(
-                int((self.x() + delta.x()) / 32) * 32,
-                int((self.y() + delta.y()) / 32) * 32,
-            )
+from .canvas import CanvasScene
 
 
 class MainWindow(QMainWindow):
@@ -45,22 +20,6 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle("Amaranth Companion")
 
-        self.scroll = QScrollArea()
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setCentralWidget(self.scroll)
-
-        self.widget = QWidget()
-        self.widget.setGeometry(0, 0, 2000, 1000)
-        self.scroll.setWidget(self.widget)
-
-        self.layout = QVBoxLayout()
-        self.widget.setLayout(self.layout)
-
-        self.centralLabel = QLabel("Hello, World")
-        self.centralLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.layout.addWidget(self.centralLabel)
-
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
@@ -68,12 +27,12 @@ class MainWindow(QMainWindow):
         self._createContextMenu()
         self._connectActions()
 
-        label = DraggableLabel(self.widget)
-        label.setText("Drag me!")
-        label.setGeometry(50, 50, 100, 30)
+        self.view = QGraphicsView(self)
 
-    # def wheelEvent(self, event):
-    #     print(event.angleDelta())
+        self.canvas_scene = CanvasScene()
+
+        self.view.setScene(self.canvas_scene)
+        self.setCentralWidget(self.view)
 
     def _createMenuBar(self):
         menuBar = QMenuBar(self)
@@ -200,63 +159,40 @@ class MainWindow(QMainWindow):
         self.openRecentMenu.aboutToShow.connect(self.populateOpenRecent)
 
     def _createContextMenu(self):
-        # Setting contextMenuPolicy
-        self.centralLabel.setContextMenuPolicy(Qt.ActionsContextMenu)
-
-        # Populating the widget with action
-        self.centralLabel.addAction(self.newAction)
-        self.centralLabel.addAction(self.openAction)
-        self.centralLabel.addAction(self.saveAction)
-
-        separator = QAction(self)
-        separator.setSeparator(True)
-        self.centralLabel.addAction(separator)
-
-        self.centralLabel.addAction(self.copyAction)
-        self.centralLabel.addAction(self.pasteAction)
-        self.centralLabel.addAction(self.cutAction)
+        pass
 
     def newFile(self):
-        # Logic for creating a new file goes here...
-        self.centralLabel.setText("<b>File > New</b> clicked")
+        pass
 
     def openFile(self):
-        # Logic for opening an existing file goes here...
-        self.centralLabel.setText("<b>File > Open...</b> clicked")
+        pass
 
     def openRecentFile(self, filename):
-        # Logic for opening a recent file goes here...
-        self.centralLabel.setText(f"<b>{filename}</b> opened")
+        pass
 
     def saveFile(self):
-        # Logic for saving a file goes here...
-        self.centralLabel.setText("<b>File > Save</b> clicked")
+        pass
 
     def copyContent(self):
-        # Logic for copying content goes here...
-        self.centralLabel.setText("<b>Edit > Copy</b> clicked")
+        pass
 
     def pasteContent(self):
-        # Logic for pasting content goes here...
-        self.centralLabel.setText("<b>Edit > Paste</b> clicked")
+        pass
 
     def cutContent(self):
-        # Logic for cutting content goes here...
-        self.centralLabel.setText("<b>Edit > Cut</b> clicked")
+        pass
 
     def zoomIn(self):
-        self.centralLabel.setText("<b>Zoom In</b> clicked")
+        pass
 
     def zoomOut(self):
-        self.centralLabel.setText("<b>Zoom Out</b> clicked")
+        pass
 
     def helpContent(self):
-        # Logic for launching help goes here...
-        self.centralLabel.setText("<b>Help > Help Content...</b> clicked")
+        pass
 
     def about(self):
-        # Logic for showing an about dialog content goes here...
-        self.centralLabel.setText("<b>Help > About...</b> clicked")
+        pass
 
     def populateOpenRecent(self):
         # Step 1. Remove the old options from the menu
