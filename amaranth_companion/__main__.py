@@ -49,6 +49,7 @@ def main(args: Namespace):
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()
+    # win.newFile()
     return app.exec_()
 
 

@@ -9,7 +9,8 @@ from PyQt5.QtWidgets import (
     QGraphicsItem,
 )
 from PyQt5.QtGui import QIcon, QKeySequence
-from .canvas import CanvasScene, CanvasView
+
+from ..module import Module, ModuleScene, ModuleSceneView
 
 
 class MainWindow(QMainWindow):
@@ -27,18 +28,17 @@ class MainWindow(QMainWindow):
         self._createContextMenu()
         self._connectActions()
 
-        self.canvas_scene = CanvasScene()
-        self.canvas_view = CanvasView(self, self.canvas_scene)
+        self.view = ModuleSceneView(parent=self)
 
-        self.addDebugContent()
-
-        # self.view.setScene(self.canvas_scene)
-        self.setCentralWidget(self.canvas_view)
+        self.setCentralWidget(self.view)
 
     def addDebugContent(self):
-        rect = self.canvas_scene.addRect(-96, -96, 64, 32)
+        rect = self.scene.addRect(-96, -96, 64, 32)
         rect.setFlag(QGraphicsItem.ItemIsMovable)
         rect.setFlag(QGraphicsItem.ItemIsSelectable)
+
+    def openModule(self, module):
+        self.view.scene = module.scene
 
     def _createMenuBar(self):
         menuBar = QMenuBar(self)
@@ -168,7 +168,9 @@ class MainWindow(QMainWindow):
         pass
 
     def newFile(self):
-        pass
+        self.module = Module()
+        self.module.scene.addDebugContent()
+        self.openModule(self.module)
 
     def openFile(self):
         pass
@@ -189,10 +191,10 @@ class MainWindow(QMainWindow):
         pass
 
     def zoomIn(self):
-        self.canvas_view.zoomInOut(1)
+        self.view.zoomInOut(1)
 
     def zoomOut(self):
-        self.canvas_view.zoomInOut(-1)
+        self.view.zoomInOut(-1)
 
     def helpContent(self):
         pass
