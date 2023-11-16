@@ -80,7 +80,6 @@ class CanvasView(QGraphicsView):
         self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
         self.setScene(self.canvas_scene)
 
@@ -155,16 +154,26 @@ class CanvasView(QGraphicsView):
     def rightButtonRelease(self, event):
         super().mousePressEvent(event)
 
+    def enterEvent(self, event):
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+    def leaveEvent(self, event):
+        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
+
     def wheelEvent(self, event):
-        # add or substract zoom step according to scroll direction
-        self.zoom += self.zoom_step if (event.angleDelta().y() > 0) else -self.zoom_step
+        self.zoomInOut(1 if (event.angleDelta().y() > 0) else -1)
+
+    def zoomInOut(self, steps):
+        zoom = self.zoom + self.zoom_step * steps
 
         # clamp zoom
-        while self.zoom < self.zoom_min:
-            self.zoom += self.zoom_step
+        while zoom < self.zoom_min:
+            zoom += self.zoom_step
 
-        while self.zoom > self.zoom_max:
-            self.zoom -= self.zoom_step
+        while zoom > self.zoom_max:
+            zoom -= self.zoom_step
+
+        self.zoom = zoom
 
         transform = QTransform()
         transform.scale(self.zoom_factor**self.zoom, self.zoom_factor**self.zoom)

@@ -189,10 +189,10 @@ class MainWindow(QMainWindow):
         pass
 
     def zoomIn(self):
-        pass
+        self.canvas_view.zoomInOut(1)
 
     def zoomOut(self):
-        pass
+        self.canvas_view.zoomInOut(-1)
 
     def helpContent(self):
         pass
