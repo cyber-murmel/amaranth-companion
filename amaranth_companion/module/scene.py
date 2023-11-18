@@ -12,9 +12,8 @@ class ModuleScene(QGraphicsScene):
         self._grid_stride = 5
 
         palette = QPalette()
-        color_base = palette.color(palette.AlternateBase)
-        self._color_major = color_base.darker()
-        self._color_minor = self._color_major.lighter()
+        self._color_major = palette.color(QPalette.Dark)
+        self._color_minor = palette.color(QPalette.Mid)
 
         self._pen_minor = QPen(self._color_minor)
         self._pen_major = QPen(self._color_major)
@@ -53,12 +52,12 @@ class ModuleScene(QGraphicsScene):
             else:
                 lines_minor.append(line)
 
-        if lines_major:
-            painter.setPen(self._pen_major)
-            painter.drawLines(*lines_major)
         if lines_minor:
             painter.setPen(self._pen_minor)
             painter.drawLines(*lines_minor)
+        if lines_major:
+            painter.setPen(self._pen_major)
+            painter.drawLines(*lines_major)
 
     def addDebugContent(self):
         greenBrush = QBrush(Qt.green)

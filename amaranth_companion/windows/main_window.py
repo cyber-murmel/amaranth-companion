@@ -10,7 +10,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QIcon, QKeySequence
 
-from ..module import Module, ModuleScene, ModuleSceneView
+from ..module import Module, ModuleSceneView
+from ..node import Node, NodeContentWidget
+from ..edge import Edge
 
 
 class MainWindow(QMainWindow):
@@ -28,17 +30,12 @@ class MainWindow(QMainWindow):
         self._createContextMenu()
         self._connectActions()
 
-        self.view = ModuleSceneView(parent=self)
+        self.scene_view = ModuleSceneView(parent=self)
 
-        self.setCentralWidget(self.view)
-
-    def addDebugContent(self):
-        rect = self.scene.addRect(-96, -96, 64, 32)
-        rect.setFlag(QGraphicsItem.ItemIsMovable)
-        rect.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setCentralWidget(self.scene_view)
 
     def openModule(self, module):
-        self.view.scene = module.scene
+        self.scene_view.scene = module.scene
 
     def _createMenuBar(self):
         menuBar = QMenuBar(self)
@@ -169,7 +166,19 @@ class MainWindow(QMainWindow):
 
     def newFile(self):
         self.module = Module()
-        self.module.scene.addDebugContent()
+        # self.module.scene.addDebugContent()
+        nodes: [Node] = []
+        for i in range(3):
+            node = Node(f"{i}", NodeContentWidget(), [1, 1, 1], [1, 1])
+            self.module.addNode(node)
+            node.pos = (50 + i * 250, 50 + i * 50)
+            nodes.append(node)
+            # print(node.pos)
+
+        edge = Edge(nodes[0]._outputs[0], nodes[1]._inputs[0])
+
+        self.module.addEdge(edge)
+
         self.openModule(self.module)
 
     def openFile(self):
@@ -191,10 +200,10 @@ class MainWindow(QMainWindow):
         pass
 
     def zoomIn(self):
-        self.view.zoomInOut(1)
+        self.scene_view.zoomInOut(1)
 
     def zoomOut(self):
-        self.view.zoomInOut(-1)
+        self.scene_view.zoomInOut(-1)
 
     def helpContent(self):
         pass

@@ -1,4 +1,5 @@
 from .scene import ModuleScene
+from ..node import Node
 
 
 class Module:
@@ -12,13 +13,15 @@ class Module:
     def scene(self):
         return self._scene
 
-    def addNode(self, node):
+    def addNode(self, node: Node):
         self._nodes.append(node)
+        self.scene.addItem(node.graphics_item)
 
     def addEdge(self, edge):
         self._edges.append(edge)
+        self.scene.addItem(edge.graphics_item)
 
-    def removeNode(self, node):
+    def removeNode(self, node: Node):
         self._nodes.remove(node)
 
     def removeEdge(self, edge):

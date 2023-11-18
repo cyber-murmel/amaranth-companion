@@ -10,7 +10,7 @@ class ModuleSceneView(QGraphicsView):
         super().__init__(parent)
 
         self.scene = scene  # calls setter, setter call setScene
-        self.zoom_min, self.zoom_max = -10, 1
+        self.zoom_min, self.zoom_max = -10, 5
         self.zoom_factor = 1.25
         self.zoom_step = 1
         self.zoom = 0
@@ -113,7 +113,11 @@ class ModuleSceneView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
 
     def wheelEvent(self, event):
-        self.zoomInOut(1 if (event.angleDelta().y() > 0) else -1)
+        self.zoomInOut(
+            1
+            if (event.angleDelta().y() > 0)
+            else (-1 if (event.angleDelta().y() < 0) else 0)
+        )
 
     def zoomInOut(self, steps):
         zoom = self.zoom + self.zoom_step * steps
