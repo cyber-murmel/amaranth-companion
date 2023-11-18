@@ -20,6 +20,8 @@ mkShell rec {
   buildInputs = [
     python-with-my-packages
     adwaita-qt
+    jetbrains.pycharm-community
+    poetry
   ];
   # https://discourse.nixos.org/t/python-qt-woes/11808/10
   shellHook = ''

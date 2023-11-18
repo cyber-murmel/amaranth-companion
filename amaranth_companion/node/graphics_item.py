@@ -5,8 +5,10 @@ from .content_widget import NodeContentWidget
 
 
 class NodeGraphicsItem(QGraphicsItem):
-    def __init__(self, content: NodeContentWidget, title: str = "Node", parent=None):
+    def __init__(self, node, title: str = "Node", parent=None):
         super().__init__(parent)
+
+        self._node = node
 
         self.width = 200
         self.height = 300
@@ -27,7 +29,7 @@ class NodeGraphicsItem(QGraphicsItem):
 
         # init content
         self._proxy_widget = QGraphicsProxyWidget(self)
-        self.content = content
+        self.content_widget = self._node.content_widget
 
         # init sockets
 
@@ -37,7 +39,7 @@ class NodeGraphicsItem(QGraphicsItem):
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-        print("move")
+        self._node.update_edges()
 
     @property
     def title(self):
@@ -49,11 +51,11 @@ class NodeGraphicsItem(QGraphicsItem):
         self._title_item.setPlainText(self._title)
 
     @property
-    def content(self):
+    def content_widget(self):
         return self._content
 
-    @content.setter
-    def content(self, value):
+    @content_widget.setter
+    def content_widget(self, value):
         self._content = value
         self._content.setGeometry(
             self.edge_size,

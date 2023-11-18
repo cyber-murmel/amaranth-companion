@@ -7,14 +7,15 @@ class Edge:
         self._start_socket = start_socket
         self._end_socket = end_socket
 
-        print(self.start_point.x())
-        print(self.end_point)
+        self._start_socket.add_edge(self)
+        self._end_socket.add_edge(self)
 
         self._graphics_item = EdgeGraphicsItem(self.start_point, self.end_point, parent)
 
     def update_path(self):
-        self._graphics_item.start_point = self.start_point
-        self._graphics_item.end_point = self.end_point
+        self.graphics_item.start_point = self.start_point
+        self.graphics_item.end_point = self.end_point
+        self.graphics_item.update_path()
 
     @property
     def graphics_item(self):

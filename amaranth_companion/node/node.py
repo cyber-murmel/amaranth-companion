@@ -24,7 +24,7 @@ class Node:
 
         self._content_widget = content_widget
 
-        self._graphics_item = NodeGraphicsItem(self._content_widget, title)
+        self._graphics_item = NodeGraphicsItem(self, title)
 
         self.socket_spacing = 20
 
@@ -53,7 +53,7 @@ class Node:
 
     @property
     def content_widget(self):
-        return self._graphics_item
+        return self._content_widget
 
     @property
     def pos(self):
@@ -66,17 +66,11 @@ class Node:
 
     def get_socket_position(self, index, position: SocketPosition):
         x = 0 if (position in (SocketPosition.LEFT,)) else self._graphics_item.width
-
-        # if position in (LEFT_BOTTOM, RIGHT_BOTTOM):
-        #     # start from bottom
-        #     y = (
-        #         self._graphics_item.height
-        #         - self._graphics_item.edge_size
-        #         - self._graphics_item._padding
-        #         - index * self.socket_spacing
-        #     )
-        # else:
-        # start from top
         y = (2 + index) * self.socket_spacing
-
         return x, y
+
+    def update_edges(self):
+        for socket in self._inputs:
+            socket.update_edges()
+        for socket in self._outputs:
+            socket.update_edges()
