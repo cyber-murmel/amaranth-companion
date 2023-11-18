@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsItem
 from PyQt5.QtGui import QPainterPath, QPen, QPalette
 from PyQt5.QtCore import QPointF, Qt
+
 # from math import abs
+
 
 class EdgeGraphicsItem(QGraphicsPathItem):
     def __init__(self, start_point: QPointF, end_point: QPointF, parent=None):

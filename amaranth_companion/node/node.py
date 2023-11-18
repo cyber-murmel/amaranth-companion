@@ -13,7 +13,11 @@ class SocketPosition(Enum):
 
 class Node:
     def __init__(
-        self, title: str, content_widget: NodeContentWidget, input_types: [], output_types: []
+        self,
+        title: str,
+        content_widget: NodeContentWidget,
+        input_types: [],
+        output_types: [],
     ):
         self._inputs = []
         self._outputs = []
@@ -29,7 +33,9 @@ class Node:
             socket = Socket(input_type)
             self._inputs.append(socket)
             socket.graphics_item.setParentItem(self._graphics_item)
-            socket.graphics_item.setPos(*self.get_socket_position(i, SocketPosition.LEFT))
+            socket.graphics_item.setPos(
+                *self.get_socket_position(i, SocketPosition.LEFT)
+            )
             i += 1
         i = 0
         for output_type in output_types:

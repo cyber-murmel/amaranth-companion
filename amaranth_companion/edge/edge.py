@@ -22,11 +22,17 @@ class Edge:
 
     @property
     def start_point(self):
-        return self._start_socket.graphics_item.parentItem().pos() + self._start_socket.graphics_item.pos()
+        return (
+            self._start_socket.graphics_item.parentItem().pos()
+            + self._start_socket.graphics_item.pos()
+        )
 
     @property
     def end_point(self):
-        return self._end_socket.graphics_item.parentItem().pos() + self._end_socket.graphics_item.pos()
+        return (
+            self._end_socket.graphics_item.parentItem().pos()
+            + self._end_socket.graphics_item.pos()
+        )
 
     @property
     def start_socket(self):
@@ -35,4 +41,3 @@ class Edge:
     @property
     def end_socket(self):
         return self._end_socket
-
