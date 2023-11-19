@@ -17,6 +17,8 @@ class SocketGraphicsItem(QGraphicsItem):
         self._pen = QPen(palette.color(QPalette.Dark))
         self._brush = QBrush(QColor("#FFFF7700"))
 
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+
     def boundingRect(self):
         return QRectF(
             -self.radius - self.outline_width,
