@@ -210,10 +210,12 @@ class ModuleSceneView(QGraphicsView):
         del self._drag_edge_item
 
         if type(item) is SocketGraphicsItem:
-            for edge in item.socket._edges:
-                self.module.removeEdge(edge)
+            new_edge = Edge(self._drag_start_socket, item.socket)
+            if self.module.addEdge(new_edge):
+                for edge in item.socket._edges:
+                    if not (edge is new_edge):
+                        self.module.removeEdge(edge)
 
-            self.module.addEdge(Edge(self._drag_start_socket, item.socket))
             return True
 
         return False
