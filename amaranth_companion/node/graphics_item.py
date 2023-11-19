@@ -31,15 +31,9 @@ class NodeGraphicsItem(QGraphicsItem):
         self._proxy_widget = QGraphicsProxyWidget(self)
         self.content_widget = self._node.content_widget
 
-        # init sockets
-
         # enable movement
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setFlag(QGraphicsItem.ItemIsMovable)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        self._node.update_edges()
 
     @property
     def title(self):

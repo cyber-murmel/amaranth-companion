@@ -174,8 +174,6 @@ class ModuleSceneView(QGraphicsView):
             self._drag_edge_item.end_point = start_point
             self.scene.addItem(self._drag_edge_item)
 
-            print("Start dragging edge")
-            print("  assign Start Socket")
             return True
 
         return False
@@ -185,6 +183,21 @@ class ModuleSceneView(QGraphicsView):
             pos = self.mapToScene(event.pos())
             self._drag_edge_item.end_point = pos
             self._drag_edge_item.update_path()
+
+        if self.module:
+            selected_nodes = [
+                node for node in self.module._nodes if node.graphics_item.isSelected()
+            ]
+
+            selected_edges = {
+                edge
+                for node in selected_nodes
+                for socket in node._inputs + node._outputs
+                for edge in socket._edges
+            }
+
+            for edge in selected_edges:
+                edge.update_path()
 
         super().mouseMoveEvent(event)
 
@@ -196,8 +209,6 @@ class ModuleSceneView(QGraphicsView):
         del self._drag_edge_item
 
         if type(item) is SocketGraphicsItem:
-            print("  assign End Socket")
-
             for edge in item.socket._edges:
                 self.module.removeEdge(edge)
 

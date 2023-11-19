@@ -46,3 +46,7 @@ class Edge:
     @end_socket.setter
     def end_socket(self, val):
         self._end_socket = val
+
+    def remove_from_sockets(self):
+        self.start_socket.remove_edge(self)
+        self.end_socket.remove_edge(self)
