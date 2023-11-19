@@ -4,8 +4,10 @@ from PyQt5.QtCore import QRectF
 
 
 class SocketGraphicsItem(QGraphicsItem):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, socket):
+        super().__init__(socket.node.graphics_item)
+
+        self._socket = socket
 
         self.radius = 6
         self.outline_width = 1
@@ -30,3 +32,7 @@ class SocketGraphicsItem(QGraphicsItem):
         painter.drawEllipse(
             -self.radius, -self.radius, 2 * self.radius, 2 * self.radius
         )
+
+    @property
+    def socket(self):
+        return self._socket

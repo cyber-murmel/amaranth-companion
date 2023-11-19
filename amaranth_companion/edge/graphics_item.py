@@ -2,12 +2,16 @@ from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsItem
 from PyQt5.QtGui import QPainterPath, QPen, QPalette
 from PyQt5.QtCore import QPointF, Qt
 
+# from .edge import Edge
+
 # from math import abs
 
 
 class EdgeGraphicsItem(QGraphicsPathItem):
-    def __init__(self, start_point: QPointF, end_point: QPointF, parent=None):
+    def __init__(self, edge, parent=None):
         super().__init__(parent)
+
+        self._edge = edge
 
         self.radius = 6
         self.outline_width = 1
@@ -24,15 +28,12 @@ class EdgeGraphicsItem(QGraphicsPathItem):
         # push to background
         self.setZValue(-1)
 
-        self.start_point = start_point
-        self.end_point = end_point
-
-        self.posSource = [0, 0]
-        self.posDestination = [200, 100]
+        self._start_point = None
+        self._end_point = None
 
     @property
     def start_point(self):
-        return self._start_socket
+        return self._start_point
 
     @start_point.setter
     def start_point(self, val):
@@ -40,7 +41,7 @@ class EdgeGraphicsItem(QGraphicsPathItem):
 
     @property
     def end_point(self):
-        return self._end_socket
+        return self._end_point
 
     @end_point.setter
     def end_point(self, val):
@@ -49,25 +50,24 @@ class EdgeGraphicsItem(QGraphicsPathItem):
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None, **kwargs):
         self.update_path()
 
-        painter.setPen(self._pen if not self.isSelected() else self._pen_selected)
+        if not self._edge or not self._edge.end_socket:
+            painter.setPen(self._pen_selected)
+        else:
+            painter.setPen(self._pen if not self.isSelected() else self._pen_selected)
+
         painter.setBrush(Qt.NoBrush)
         painter.drawPath(self.path())
 
     def update_path(self):
-        s = self.posSource
-        d = self.posDestination
-        # dist = (d[0] - s[0]) * 0.5
-        dist = abs(self._start_point.x() - self._end_point.x())
-        # if s[0] > d[0]:
-        #     dist *= -1
+        dist = abs(self.start_point.x() - self.end_point.x())
 
-        path = QPainterPath(self._start_point)
+        path = QPainterPath(self.start_point)
         path.cubicTo(
-            self._start_point.x() + dist,
-            self._start_point.y(),
-            self._end_point.x() - dist,
-            self._end_point.y(),
-            self._end_point.x(),
-            self._end_point.y(),
+            self.start_point.x() + dist,
+            self.start_point.y(),
+            self.end_point.x() - dist,
+            self.end_point.y(),
+            self.end_point.x(),
+            self.end_point.y(),
         )
         self.setPath(path)

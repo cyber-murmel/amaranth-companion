@@ -26,3 +26,6 @@ class Module:
 
     def removeEdge(self, edge):
         self._edges.remove(edge)
+        edge.start_socket.remove_edge(edge)
+        edge.end_socket.remove_edge(edge)
+        self.scene.removeItem(edge.graphics_item)

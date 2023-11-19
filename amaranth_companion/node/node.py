@@ -30,18 +30,16 @@ class Node:
 
         i = 0
         for input_type in input_types:
-            socket = Socket(input_type)
+            socket = Socket(self, input_type)
             self._inputs.append(socket)
-            socket.graphics_item.setParentItem(self._graphics_item)
             socket.graphics_item.setPos(
                 *self.get_socket_position(i, SocketPosition.LEFT)
             )
             i += 1
         i = 0
         for output_type in output_types:
-            socket = Socket(output_type)
+            socket = Socket(self, output_type)
             self._outputs.append(socket)
-            socket.graphics_item.setParentItem(self._graphics_item)
             socket.graphics_item.setPos(
                 *self.get_socket_position(i, SocketPosition.RIGHT)
             )

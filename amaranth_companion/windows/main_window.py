@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.scene_view)
 
     def openModule(self, module):
-        self.scene_view.scene = module.scene
+        self.scene_view.module = module
 
     def _createMenuBar(self):
         menuBar = QMenuBar(self)
@@ -200,10 +200,10 @@ class MainWindow(QMainWindow):
         pass
 
     def zoomIn(self):
-        self.scene_view.zoomInOut(1)
+        self.scene_view.zoom_in_out(1)
 
     def zoomOut(self):
-        self.scene_view.zoomInOut(-1)
+        self.scene_view.zoom_in_out(-1)
 
     def helpContent(self):
         pass

@@ -10,7 +10,9 @@ class Edge:
         self._start_socket.add_edge(self)
         self._end_socket.add_edge(self)
 
-        self._graphics_item = EdgeGraphicsItem(self.start_point, self.end_point, parent)
+        self._graphics_item = EdgeGraphicsItem(self)
+
+        self.update_path()
 
     def update_path(self):
         self.graphics_item.start_point = self.start_point
@@ -23,22 +25,37 @@ class Edge:
 
     @property
     def start_point(self):
-        return (
-            self._start_socket.graphics_item.parentItem().pos()
-            + self._start_socket.graphics_item.pos()
-        )
+        return self._start_socket.scene_pos
 
     @property
     def end_point(self):
-        return (
-            self._end_socket.graphics_item.parentItem().pos()
-            + self._end_socket.graphics_item.pos()
-        )
+        return self._end_socket.scene_pos
+
+    #
+    # @end_point.setter
+    # def end_point(self, val):
+    #     self._end_point = val
 
     @property
     def start_socket(self):
         return self._start_socket
 
+    @start_socket.setter
+    def start_socket(self, val):
+        self._start_socket = val
+        # self._graphics_item.start_point = (
+        #     self._start_socket.graphics_item.parentItem().pos()
+        #     + self._start_socket.graphics_item.pos()
+        # )
+
     @property
     def end_socket(self):
         return self._end_socket
+
+    @end_socket.setter
+    def end_socket(self, val):
+        self._end_socket = val
+        # self._graphics_item.start_point = (
+        #     self._end_socket.graphics_item.parentItem().pos()
+        #     + self._end_socket.graphics_item.pos()
+        # )
