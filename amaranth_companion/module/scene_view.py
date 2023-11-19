@@ -129,6 +129,11 @@ class ModuleSceneView(QGraphicsView):
             if self.edge_drag_end(item):
                 return
 
+        if item:
+            self.setDragMode(QGraphicsView.NoDrag)
+        else:
+            self.setDragMode(QGraphicsView.RubberBandDrag)
+
         super().mousePressEvent(event)
 
     def right_button_press(self, event):
