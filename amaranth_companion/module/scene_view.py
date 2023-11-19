@@ -57,6 +57,7 @@ class ModuleSceneView(QGraphicsView):
         self._scene = val
         if self._scene:
             self.setScene(self._scene)
+            self.centerOn(0, 0)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
