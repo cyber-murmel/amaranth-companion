@@ -20,7 +20,7 @@ class Socket:
 
     @property
     def scene_pos(self):
-        return self.graphics_item.parentItem().pos() + self.graphics_item.pos()
+        return self.node.graphics_item.pos() + self.graphics_item.pos()
 
     def add_edge(self, edge):
         self._edges.append(edge)
