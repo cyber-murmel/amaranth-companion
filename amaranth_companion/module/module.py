@@ -18,8 +18,16 @@ class Module:
         self.scene.addItem(node.graphics_item)
 
     def addEdge(self, edge):
-        self._edges.append(edge)
-        self.scene.addItem(edge.graphics_item)
+        if (edge.start_socket in edge.start_socket.node._outputs) and (
+            edge.end_socket in edge.end_socket.node._inputs
+        ):
+            self._edges.append(edge)
+            self.scene.addItem(edge.graphics_item)
+            return True
+
+        edge.remove_from_sockets()
+
+        return False
 
     def removeNode(self, node: Node):
         self._nodes.remove(node)
