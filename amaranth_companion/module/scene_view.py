@@ -148,10 +148,10 @@ class ModuleSceneView(QGraphicsView):
                 if self.edge_drag_end(item):
                     return
 
-        super().mousePressEvent(event)
+        super().mouseReleaseEvent(event)
 
     def right_button_release(self, event):
-        super().mousePressEvent(event)
+        super().mouseReleaseEvent(event)
 
     def get_item_at_click(self, event):
         """return the object on which we've clicked/release mouse button"""
