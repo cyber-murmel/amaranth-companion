@@ -33,6 +33,11 @@ class NodeGraphicsItem(QGraphicsItem):
         # enable movement
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setFlag(QGraphicsItem.ItemIsMovable)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
+
+    @property
+    def scene(self):
+        return self._node.module.scene
 
     @property
     def title(self):
@@ -57,6 +62,22 @@ class NodeGraphicsItem(QGraphicsItem):
             self.height - 2 * self.edge_size - self.title_height,
         )
         self._proxy_widget.setWidget(self._content)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionChange:
+            rect = self.scene.sceneRect()
+            grid_size = self.scene.GRID_SIZE
+
+            # limit movement to scene
+            if not rect.contains(value):
+                value.setX(min(max(rect.left(), value.x()), rect.right() - grid_size))
+                value.setY(min(max(rect.top(), value.y()), rect.bottom() - grid_size))
+
+            # place on grid
+            value.setX(round(value.x() / grid_size) * grid_size)
+            value.setY(round(value.y() / grid_size) * grid_size)
+
+        return value
 
     def boundingRect(self):
         return QRectF(0, 0, self.width, self.height).normalized()

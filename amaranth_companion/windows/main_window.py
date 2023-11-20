@@ -169,7 +169,7 @@ class MainWindow(QMainWindow):
         for i in range(3):
             node = Node(module, f"{i}", NodeContentWidget(), [1, 1, 1], [1, 1])
             module.addNode(node)
-            node.pos = (50 + i * 250, 50 + i * 50)
+            node.pos = (-300 + i * 300, -300 + i * 100)
             nodes.append(node)
 
         edge = Edge(nodes[0]._outputs[0], nodes[1]._inputs[0])

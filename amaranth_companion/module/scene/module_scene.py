@@ -5,11 +5,11 @@ from PyQt5.QtWidgets import QGraphicsScene
 
 
 class ModuleScene(QGraphicsScene):
+    GRID_SIZE = 20  # size of unit length
+    GRID_STRIDE = 5  # number of unit length in macro length
+
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self._grid_size = 20
-        self._grid_stride = 5
 
         palette = QPalette()
         self._color_major = palette.color(QPalette.Dark)
@@ -35,19 +35,19 @@ class ModuleScene(QGraphicsScene):
         right = floor(rect.right())
         bottom = floor(rect.bottom())
 
-        left_most = left - (left % self._grid_size)
-        top_most = top - (top % self._grid_size)
+        left_most = left - (left % self.GRID_SIZE)
+        top_most = top - (top % self.GRID_SIZE)
 
         lines_major, lines_minor = [], []
-        for x in range(left_most, right, self._grid_size):
+        for x in range(left_most, right, self.GRID_SIZE):
             line = QLine(x, top, x, bottom)
-            if 0 == (x % (self._grid_size * self._grid_stride)):
+            if 0 == (x % (self.GRID_SIZE * self.GRID_STRIDE)):
                 lines_major.append(line)
             else:
                 lines_minor.append(line)
-        for y in range(top_most, bottom, self._grid_size):
+        for y in range(top_most, bottom, self.GRID_SIZE):
             line = QLine(left, y, right, y)
-            if 0 == (y % (self._grid_size * self._grid_stride)):
+            if 0 == (y % (self.GRID_SIZE * self.GRID_STRIDE)):
                 lines_major.append(line)
             else:
                 lines_minor.append(line)
