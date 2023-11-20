@@ -4,8 +4,9 @@ from PyQt5.QtWidgets import QGraphicsView
 
 from amaranth_companion.module.element import Edge
 from amaranth_companion.module.element.graphics_item import (
-    SocketGraphicsItem,
     EdgeGraphicsItem,
+    NodeGraphicsItem,
+    SocketGraphicsItem,
 )
 
 
@@ -249,3 +250,20 @@ class ModuleSceneView(QGraphicsView):
         transform = QTransform()
         transform.scale(self.ZOOM_FACTOR**self._zoom, self.ZOOM_FACTOR**self._zoom)
         self.setTransform(transform)
+
+    def keyPressEvent(self, event):
+        if (not self.node_edit) and (event.key() == Qt.Key_Delete):
+            self.delete_selected()
+        else:
+            super().keyPressEvent(event)
+
+    def delete_selected(self):
+        selected_items = self.scene.selectedItems()
+
+        selected_edge_items = [item for item in selected_items if isinstance(item, EdgeGraphicsItem)]
+        selected_node_items = [item for item in selected_items if isinstance(item, NodeGraphicsItem)]
+
+        for edge_item in selected_edge_items:
+            self.module.removeEdge(edge_item.edge)
+        for node_item in selected_node_items:
+            self.module.removeNode(node_item.node)

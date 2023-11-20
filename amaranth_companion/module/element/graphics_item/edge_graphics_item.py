@@ -28,6 +28,10 @@ class EdgeGraphicsItem(QGraphicsPathItem):
         self._end_point = None
 
     @property
+    def edge(self):
+        return self._edge
+
+    @property
     def start_point(self):
         return self._start_point
 

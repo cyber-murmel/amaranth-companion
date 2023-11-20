@@ -37,7 +37,15 @@ class Module:
     def removeNode(self, node):
         self._nodes.remove(node)
 
+        for socket in node._inputs + node._outputs:
+            for edge in socket.edges:
+                self.removeEdge(edge)
+
+        self.scene.removeItem(node.graphics_item)
+
     def removeEdge(self, edge):
         self._edges.remove(edge)
+
         edge.remove_from_sockets()
+
         self.scene.removeItem(edge.graphics_item)
