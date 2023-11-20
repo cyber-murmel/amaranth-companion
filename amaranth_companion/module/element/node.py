@@ -1,7 +1,9 @@
 from .socket import Socket
 
-from amaranth_companion.module.gui.node_graphics_item import NodeGraphicsItem
-from amaranth_companion.module.gui.node_content_widget import NodeContentWidget
+from .graphics_item import NodeGraphicsItem
+from amaranth_companion.module.element.graphics_item.node_content_widget import (
+    NodeContentWidget,
+)
 from enum import Enum
 
 
@@ -12,7 +14,7 @@ class SocketPosition(Enum):
     RIGHT = 4
 
 
-class Node():
+class Node:
     SOCKET_SPACING = 20
 
     def __init__(

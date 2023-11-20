@@ -1,5 +1,5 @@
-from amaranth_companion.module.gui.scene import ModuleScene
-from .gui.scene_view import ModuleSceneView
+from amaranth_companion.module.scene.module_scene import ModuleScene
+from .scene.module_scene_view import ModuleSceneView
 
 
 class Module:

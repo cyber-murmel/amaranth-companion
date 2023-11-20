@@ -1,8 +1,8 @@
 from .socket import Socket
-from amaranth_companion.module.gui.edge_graphics_item import EdgeGraphicsItem
+from .graphics_item import EdgeGraphicsItem
 
 
-class Edge():
+class Edge:
     def __init__(self, start_socket: Socket, end_socket: Socket, parent=None):
         self._start_socket = start_socket
         self._end_socket = end_socket

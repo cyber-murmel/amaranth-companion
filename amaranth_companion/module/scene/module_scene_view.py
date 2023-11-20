@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import QGraphicsView
 from PyQt5.QtGui import QPainter, QMouseEvent, QTransform
 from PyQt5.QtCore import Qt, QEvent
 
-# from amaranth_companion.module.gui import SocketGraphicsItem, EdgeGraphicsItem
-from .socket_graphics_item import SocketGraphicsItem
-from .edge_graphics_item import EdgeGraphicsItem
 from amaranth_companion.module.element import Edge
+from amaranth_companion.module.element.graphics_item import (
+    SocketGraphicsItem,
+    EdgeGraphicsItem,
+)
 
 
 class ModuleSceneView(QGraphicsView):

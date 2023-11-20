@@ -1,7 +1,7 @@
-from amaranth_companion.module.gui.socket_graphics_item import SocketGraphicsItem
+from .graphics_item import SocketGraphicsItem
 
 
-class Socket():
+class Socket:
     def __init__(self, node, socket_type):
         self._node = node
         self._type = socket_type

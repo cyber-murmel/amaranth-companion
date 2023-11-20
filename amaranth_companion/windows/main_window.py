@@ -11,7 +11,7 @@ from PyQt5.QtGui import QIcon, QKeySequence
 
 from ..module import Module
 from ..module.element import Node, Edge
-from ..module.gui import NodeContentWidget
+from ..module.scene import NodeContentWidget
 
 
 class MainWindow(QMainWindow):
