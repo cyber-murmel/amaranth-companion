@@ -21,6 +21,9 @@ The current goal is to complete and refine the GUI.
 
 ![screenshot](./doc/screenshot.png)
 
+## Structure
+![class diagram](./doc/class_diagram.png)
+
 ## Attribution
 - [amaranth-lang](https://github.com/amaranth-lang/amaranth)
 - [Node Editor in Python Tutorial Series](https://www.blenderfreak.com/tutorials/node-editor-tutorial-series/)
