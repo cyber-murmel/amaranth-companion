@@ -1,10 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsItem
 from PyQt5.QtGui import QPainterPath, QPen, QPalette
-from PyQt5.QtCore import QPointF, Qt
-
-# from .edge import Edge
-
-# from math import abs
+from PyQt5.QtCore import Qt
 
 
 class EdgeGraphicsItem(QGraphicsPathItem):

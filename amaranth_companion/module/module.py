@@ -1,5 +1,5 @@
-from .scene import ModuleScene
-from ..node import Node
+from amaranth_companion.module.gui.scene import ModuleScene
+from .gui.scene_view import ModuleSceneView
 
 
 class Module:
@@ -8,12 +8,17 @@ class Module:
         self._edges = []
 
         self._scene = ModuleScene()
+        self._scene_view = ModuleSceneView(self)
 
     @property
     def scene(self):
         return self._scene
 
-    def addNode(self, node: Node):
+    @property
+    def scene_view(self):
+        return self._scene_view
+
+    def addNode(self, node):
         self._nodes.append(node)
         self.scene.addItem(node.graphics_item)
 
@@ -29,7 +34,7 @@ class Module:
 
         return False
 
-    def removeNode(self, node: Node):
+    def removeNode(self, node):
         self._nodes.remove(node)
 
     def removeEdge(self, edge):

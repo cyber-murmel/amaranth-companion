@@ -2,9 +2,10 @@ from PyQt5.QtWidgets import QGraphicsView
 from PyQt5.QtGui import QPainter, QMouseEvent, QTransform
 from PyQt5.QtCore import Qt, QEvent
 
-from . import ModuleScene
-from ..socket import SocketGraphicsItem
-from ..edge import Edge, EdgeGraphicsItem
+# from amaranth_companion.module.gui import SocketGraphicsItem, EdgeGraphicsItem
+from .socket_graphics_item import SocketGraphicsItem
+from .edge_graphics_item import EdgeGraphicsItem
+from amaranth_companion.module.element import Edge
 
 
 class ModuleSceneView(QGraphicsView):
@@ -12,17 +13,17 @@ class ModuleSceneView(QGraphicsView):
         NONE = 0
         EDGE = 1
 
-    def __init__(self, module=None, parent=None):
+    ZOOM_STEP = 1
+    ZOOM_MIN, ZOOM_MAX = -10, 5
+    ZOOM_FACTOR = 1.25
+
+    def __init__(self, module, parent=None):
         super().__init__(parent)
 
-        self.module = module
-        if module:
-            self.scene = self.module.scene  # calls setter, setter calls setScene
-        self.zoom_min, self.zoom_max = -10, 5
-        self.zoom_factor = 1.25
-        self.zoom_step = 1
-        self.zoom = 0
-        self.drag_mode = ModuleSceneView.DragMode.NONE
+        self._module = module
+
+        self._zoom = 0
+        self._drag_mode = ModuleSceneView.DragMode.NONE
         self._lmb_press_scene_pos = None
         self._edge_drag_threshold = 10
         self._drag_start_socket = None
@@ -38,26 +39,16 @@ class ModuleSceneView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
+        self.setScene(self.scene)
+        self.centerOn(0, 0)
+
     @property
     def module(self):
         return self._module
 
-    @module.setter
-    def module(self, val):
-        self._module = val
-        if self.module:
-            self.scene = self.module.scene
-
     @property
     def scene(self):
-        return self._scene
-
-    @scene.setter
-    def scene(self, val: ModuleScene):
-        self._scene = val
-        if self._scene:
-            self.setScene(self._scene)
-            self.centerOn(0, 0)
+        return self.module.scene
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -122,11 +113,11 @@ class ModuleSceneView(QGraphicsView):
         item = self.get_item_at_click(event)
         self._lmb_press_scene_pos = self.mapToScene(event.pos())
 
-        if self.drag_mode == self.DragMode.NONE:
+        if self._drag_mode == self.DragMode.NONE:
             if self.edge_drag_start(item):
                 return
 
-        if self.drag_mode == self.DragMode.EDGE:
+        if self._drag_mode == self.DragMode.EDGE:
             if self.edge_drag_end(item):
                 return
 
@@ -141,7 +132,7 @@ class ModuleSceneView(QGraphicsView):
         super().mousePressEvent(event)
 
     def left_button_release(self, event):
-        if self.drag_mode == ModuleSceneView.DragMode.EDGE:
+        if self._drag_mode == ModuleSceneView.DragMode.EDGE:
             # calculate drag distance
             lmb_release_scene_pos = self.mapToScene(event.pos())
             diff_press_release = self._lmb_press_scene_pos - lmb_release_scene_pos
@@ -167,7 +158,7 @@ class ModuleSceneView(QGraphicsView):
 
     def edge_drag_start(self, item):
         if type(item) is SocketGraphicsItem:
-            self.drag_mode = ModuleSceneView.DragMode.EDGE
+            self._drag_mode = ModuleSceneView.DragMode.EDGE
             self._drag_start_socket = item.socket
             start_point = item.socket.scene_pos
             self._drag_edge_item = EdgeGraphicsItem(None)
@@ -180,7 +171,7 @@ class ModuleSceneView(QGraphicsView):
         return False
 
     def mouseMoveEvent(self, event):
-        if self.drag_mode == self.DragMode.EDGE:
+        if self._drag_mode == self.DragMode.EDGE:
             pos = self.mapToScene(event.pos())
             self._drag_edge_item.end_point = pos
             self._drag_edge_item.update_path()
@@ -203,7 +194,7 @@ class ModuleSceneView(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def edge_drag_end(self, item):
-        self.drag_mode = self.DragMode.NONE
+        self._drag_mode = self.DragMode.NONE
 
         self.scene.removeItem(self._drag_edge_item)
 
@@ -212,7 +203,7 @@ class ModuleSceneView(QGraphicsView):
         if type(item) is SocketGraphicsItem:
             new_edge = Edge(self._drag_start_socket, item.socket)
             if self.module.addEdge(new_edge):
-                for edge in item.socket._edges:
+                for edge in item.socket.edges:
                     if not (edge is new_edge):
                         self.module.removeEdge(edge)
 
@@ -234,17 +225,17 @@ class ModuleSceneView(QGraphicsView):
         )
 
     def zoom_in_out(self, steps):
-        zoom = self.zoom + self.zoom_step * steps
+        zoom = self._zoom + self.ZOOM_STEP * steps
 
         # clamp zoom
-        while zoom < self.zoom_min:
-            zoom += self.zoom_step
+        while zoom < self.ZOOM_MIN:
+            zoom += self.ZOOM_STEP
 
-        while zoom > self.zoom_max:
-            zoom -= self.zoom_step
+        while zoom > self.ZOOM_MAX:
+            zoom -= self.ZOOM_STEP
 
-        self.zoom = zoom
+        self._zoom = zoom
 
         transform = QTransform()
-        transform.scale(self.zoom_factor**self.zoom, self.zoom_factor**self.zoom)
+        transform.scale(self.ZOOM_FACTOR**self._zoom, self.ZOOM_FACTOR**self._zoom)
         self.setTransform(transform)

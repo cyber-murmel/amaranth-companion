@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsItem, QPushButton, QTextEdit
-from PyQt5.QtGui import QPalette, QPen, QBrush, QFont, QColor
-from PyQt5.QtCore import QLine, Qt
+from PyQt5.QtWidgets import QGraphicsScene
+from PyQt5.QtGui import QPalette, QPen
+from PyQt5.QtCore import QLine
 from math import floor
 
 

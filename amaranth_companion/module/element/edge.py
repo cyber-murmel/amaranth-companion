@@ -1,18 +1,25 @@
-from .graphics_item import EdgeGraphicsItem
-from ..socket import Socket
+from .socket import Socket
+from amaranth_companion.module.gui.edge_graphics_item import EdgeGraphicsItem
 
 
-class Edge:
+class Edge():
     def __init__(self, start_socket: Socket, end_socket: Socket, parent=None):
         self._start_socket = start_socket
         self._end_socket = end_socket
 
+        self._graphics_item = EdgeGraphicsItem(self)
+
         self._start_socket.add_edge(self)
         self._end_socket.add_edge(self)
 
-        self._graphics_item = EdgeGraphicsItem(self)
-
         self.update_path()
+
+    @property
+    def module(self):
+        if self._start_socket:
+            return self._start_socket.module
+        elif self._end_socket:
+            return self._end_socket.module
 
     def update_path(self):
         self.graphics_item.start_point = self.start_point

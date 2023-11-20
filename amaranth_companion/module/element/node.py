@@ -1,6 +1,7 @@
-from .graphics_item import NodeGraphicsItem
-from .content_widget import NodeContentWidget
-from ..socket import Socket
+from .socket import Socket
+
+from amaranth_companion.module.gui.node_graphics_item import NodeGraphicsItem
+from amaranth_companion.module.gui.node_content_widget import NodeContentWidget
 from enum import Enum
 
 
@@ -11,39 +12,39 @@ class SocketPosition(Enum):
     RIGHT = 4
 
 
-class Node:
+class Node():
+    SOCKET_SPACING = 20
+
     def __init__(
         self,
+        module,
         title: str,
         content_widget: NodeContentWidget,
         input_types: [],
         output_types: [],
     ):
-        self._inputs = []
-        self._outputs = []
-
+        self._module = module
         self._content_widget = content_widget
-
         self._graphics_item = NodeGraphicsItem(self, title)
 
-        self.socket_spacing = 20
-
-        i = 0
-        for input_type in input_types:
-            socket = Socket(self, input_type)
+        self._inputs = []
+        self._outputs = []
+        for i in range(len(input_types)):
+            socket = Socket(self, input_types[i])
             self._inputs.append(socket)
             socket.graphics_item.setPos(
                 *self.get_socket_position(i, SocketPosition.LEFT)
             )
-            i += 1
-        i = 0
-        for output_type in output_types:
-            socket = Socket(self, output_type)
+        for i in range(len(output_types)):
+            socket = Socket(self, output_types[i])
             self._outputs.append(socket)
             socket.graphics_item.setPos(
                 *self.get_socket_position(i, SocketPosition.RIGHT)
             )
-            i += 1
+
+    @property
+    def module(self):
+        return self._module
 
     @property
     def graphics_item(self):
@@ -64,7 +65,7 @@ class Node:
 
     def get_socket_position(self, index, position: SocketPosition):
         x = 0 if (position in (SocketPosition.LEFT,)) else self._graphics_item.width
-        y = (2 + index) * self.socket_spacing
+        y = (2 + index) * self.SOCKET_SPACING
         return x, y
 
     def update_edges(self):

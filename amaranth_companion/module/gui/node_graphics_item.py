@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsProxyWidget
 from PyQt5.QtGui import QPainterPath, QBrush, QPen, QPalette
 from PyQt5.QtCore import Qt, QRectF
-from .content_widget import NodeContentWidget
 
 
 class NodeGraphicsItem(QGraphicsItem):
