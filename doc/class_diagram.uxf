@@ -12,7 +12,7 @@
     <panel_attributes>Module
 --
 nodes = []
-edges = []
+scene_view
 scene</panel_attributes>
     <additional_attributes/>
   </element>
