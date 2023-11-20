@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView
-from PyQt5.QtGui import QPainter, QMouseEvent, QTransform
 from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtGui import QPainter, QMouseEvent, QTransform
+from PyQt5.QtWidgets import QGraphicsView
 
 from amaranth_companion.module.element import Edge
 from amaranth_companion.module.element.graphics_item import (

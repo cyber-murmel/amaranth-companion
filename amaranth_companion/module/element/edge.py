@@ -1,5 +1,5 @@
-from .socket import Socket
 from .graphics_item import EdgeGraphicsItem
+from .socket import Socket
 
 
 class Edge:

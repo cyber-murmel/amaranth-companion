@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsItem
-from PyQt5.QtGui import QPainterPath, QPen, QPalette
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPainterPath, QPen, QPalette
+from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsItem
 
 
 class EdgeGraphicsItem(QGraphicsPathItem):

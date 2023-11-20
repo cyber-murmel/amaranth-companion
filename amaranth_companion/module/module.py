@@ -1,4 +1,4 @@
-from amaranth_companion.module.scene.module_scene import ModuleScene
+from .scene.module_scene import ModuleScene
 from .scene.module_scene_view import ModuleSceneView
 
 

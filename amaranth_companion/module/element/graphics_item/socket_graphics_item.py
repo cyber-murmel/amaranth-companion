@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsItem
-from PyQt5.QtGui import QBrush, QPen, QPalette, QColor
 from PyQt5.QtCore import QRectF
+from PyQt5.QtGui import QBrush, QPen, QPalette, QColor
+from PyQt5.QtWidgets import QGraphicsItem
 
 
 class SocketGraphicsItem(QGraphicsItem):
@@ -27,7 +27,7 @@ class SocketGraphicsItem(QGraphicsItem):
             2 * (self.radius + self.outline_width),
         )
 
-    def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
+    def paint(self, painter, QStyleOptionGraphicsItem, widget=None, **kwargs):
         # painting circle
         painter.setBrush(self._brush)
         painter.setPen(self._pen)

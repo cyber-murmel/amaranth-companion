@@ -1,9 +1,7 @@
+from .graphics_item.node_graphics_item import NodeGraphicsItem
+from .graphics_item.node_content_widget import NodeContentWidget
 from .socket import Socket
 
-from .graphics_item import NodeGraphicsItem
-from amaranth_companion.module.element.graphics_item.node_content_widget import (
-    NodeContentWidget,
-)
 from enum import Enum
 
 

@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QGraphicsScene
-from PyQt5.QtGui import QPalette, QPen
-from PyQt5.QtCore import QLine
 from math import floor
+from PyQt5.QtCore import QLine
+from PyQt5.QtGui import QPalette, QPen
+from PyQt5.QtWidgets import QGraphicsScene
 
 
 class ModuleScene(QGraphicsScene):
