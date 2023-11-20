@@ -23,6 +23,7 @@ class ModuleSceneView(QGraphicsView):
 
         self._module = module
 
+        self._node_edit = False
         self._zoom = 0
         self._drag_mode = ModuleSceneView.DragMode.NONE
         self._lmb_press_scene_pos = None
@@ -50,6 +51,14 @@ class ModuleSceneView(QGraphicsView):
     @property
     def scene(self):
         return self.module.scene
+
+    @property
+    def node_edit(self):
+        return self._node_edit
+
+    @node_edit.setter
+    def node_edit(self, val):
+        self._node_edit = val
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:

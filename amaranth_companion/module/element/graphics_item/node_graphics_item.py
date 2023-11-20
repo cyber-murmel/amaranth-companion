@@ -3,6 +3,24 @@ from PyQt5.QtGui import QPainterPath, QBrush, QPen, QPalette
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsProxyWidget
 
 
+class NodeProxyWidget(QGraphicsProxyWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._item = parent
+
+    @property
+    def scene_view(self):
+        return self._item.node.module.scene_view
+
+    # tell the scene if node content is being edited
+    def focusInEvent(self, a0):
+        self.scene_view.node_edit = True
+        super().focusInEvent(a0)
+
+    def focusOutEvent(self, a0):
+        self.scene_view.node_edit = False
+        super().focusOutEvent(a0)
+
 class NodeGraphicsItem(QGraphicsItem):
     def __init__(self, node, title: str = "Node", parent=None):
         super().__init__(parent)
@@ -27,7 +45,7 @@ class NodeGraphicsItem(QGraphicsItem):
         self.title = title
 
         # init content
-        self._proxy_widget = QGraphicsProxyWidget(self)
+        self._proxy_widget = NodeProxyWidget(self)
         self.content_widget = self._node.content_widget
 
         # enable movement
@@ -36,8 +54,12 @@ class NodeGraphicsItem(QGraphicsItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
 
     @property
+    def node(self):
+        return self._node
+
+    @property
     def scene(self):
-        return self._node.module.scene
+        return self.node.module.scene
 
     @property
     def title(self):
