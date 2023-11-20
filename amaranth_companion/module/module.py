@@ -5,7 +5,6 @@ from .scene.module_scene_view import ModuleSceneView
 class Module:
     def __init__(self):
         self._nodes = []
-        self._edges = []
 
         self._scene = ModuleScene()
         self._scene_view = ModuleSceneView(self)
@@ -26,7 +25,7 @@ class Module:
         if (edge.start_socket in edge.start_socket.node._outputs) and (
             edge.end_socket in edge.end_socket.node._inputs
         ):
-            self._edges.append(edge)
+            # self._edges.append(edge)
             self.scene.addItem(edge.graphics_item)
             return True
 
@@ -44,7 +43,7 @@ class Module:
         self.scene.removeItem(node.graphics_item)
 
     def removeEdge(self, edge):
-        self._edges.remove(edge)
+        # self._edges.remove(edge)
 
         edge.remove_from_sockets()
 
