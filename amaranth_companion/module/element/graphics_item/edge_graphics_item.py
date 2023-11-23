@@ -2,10 +2,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainterPath, QPen, QPalette
 from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsItem
 
+from .graphics_item import GraphicsItem
 
-class EdgeGraphicsItem(QGraphicsPathItem):
+
+class EdgeGraphicsItem(GraphicsItem, QGraphicsPathItem):
     def __init__(self, edge, parent=None):
-        super().__init__(parent)
+        super().__init__(element=edge, parent=parent)
 
         self._edge = edge
 

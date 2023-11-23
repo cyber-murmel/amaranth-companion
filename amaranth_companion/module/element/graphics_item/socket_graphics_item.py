@@ -1,11 +1,18 @@
+from typing import TYPE_CHECKING
+
 from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QBrush, QPen, QPalette, QColor
 from PyQt5.QtWidgets import QGraphicsItem
 
+from .graphics_item import GraphicsItem
 
-class SocketGraphicsItem(QGraphicsItem):
-    def __init__(self, socket):
-        super().__init__(socket.node.graphics_item)
+if TYPE_CHECKING:
+    from .. import Socket
+
+
+class SocketGraphicsItem(GraphicsItem, QGraphicsItem):
+    def __init__(self, socket: "Socket"):
+        super().__init__(element=socket, parent=socket.node.graphics_item)
 
         self._socket = socket
 

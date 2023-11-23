@@ -2,6 +2,8 @@ from PyQt5.QtCore import Qt, QRectF
 from PyQt5.QtGui import QPainterPath, QBrush, QPen, QPalette
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsProxyWidget
 
+from .graphics_item import GraphicsItem
+
 
 class NodeProxyWidget(QGraphicsProxyWidget):
     def __init__(self, parent):
@@ -21,9 +23,10 @@ class NodeProxyWidget(QGraphicsProxyWidget):
         self.scene_view.node_edit = False
         super().focusOutEvent(a0)
 
-class NodeGraphicsItem(QGraphicsItem):
+
+class NodeGraphicsItem(GraphicsItem, QGraphicsItem):
     def __init__(self, node, title: str = "Node", parent=None):
-        super().__init__(parent)
+        super().__init__(element=node, parent=parent)
 
         self._node = node
 
@@ -56,10 +59,6 @@ class NodeGraphicsItem(QGraphicsItem):
     @property
     def node(self):
         return self._node
-
-    @property
-    def scene(self):
-        return self.node.module.scene
 
     @property
     def title(self):

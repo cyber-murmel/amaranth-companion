@@ -1,8 +1,13 @@
+from enum import Enum
+from typing import TYPE_CHECKING
+from PyQt5.QtCore import QPointF
+
 from .graphics_item.node_graphics_item import NodeGraphicsItem
 from .graphics_item.node_content_widget import NodeContentWidget
 from .socket import Socket
 
-from enum import Enum
+if TYPE_CHECKING:
+    from .. import Module
 
 
 class SocketPosition(Enum):
@@ -17,18 +22,18 @@ class Node:
 
     def __init__(
         self,
-        module,
+        module: "Module",
         title: str,
         content_widget: NodeContentWidget,
         input_types: [],
         output_types: [],
     ):
-        self._module = module
-        self._content_widget = content_widget
-        self._graphics_item = NodeGraphicsItem(self, title)
+        self._module: "Module" = module
+        self._content_widget: NodeContentWidget = content_widget
+        self._graphics_item: NodeGraphicsItem = NodeGraphicsItem(self, title)
 
-        self._inputs = []
-        self._outputs = []
+        self._inputs: [Socket] = []
+        self._outputs: [Socket] = []
         for i in range(len(input_types)):
             socket = Socket(self, input_types[i])
             self._inputs.append(socket)
@@ -43,33 +48,27 @@ class Node:
             )
 
     @property
-    def module(self):
+    def module(self) -> "Module":
         return self._module
 
     @property
-    def graphics_item(self):
+    def graphics_item(self) -> NodeGraphicsItem:
         return self._graphics_item
 
     @property
-    def content_widget(self):
+    def content_widget(self) -> NodeContentWidget:
         return self._content_widget
 
     @property
-    def pos(self):
-        pos = self._graphics_item.pos()  # QPointF
+    def pos(self) -> (float, float):
+        pos: QPointF = self._graphics_item.pos()
         return pos.x(), pos.y()
 
     @pos.setter
-    def pos(self, coordinates):
+    def pos(self, coordinates: (float, float)) -> None:
         self._graphics_item.setPos(coordinates[0], coordinates[1])
 
-    def get_socket_position(self, index, position: SocketPosition):
+    def get_socket_position(self, index: int, position: SocketPosition) -> (float, float):
         x = 0 if (position in (SocketPosition.LEFT,)) else self._graphics_item.width
         y = (2 + index) * self.SOCKET_SPACING
         return x, y
-
-    def update_edges(self):
-        for socket in self._inputs:
-            socket.update_edges()
-        for socket in self._outputs:
-            socket.update_edges()
