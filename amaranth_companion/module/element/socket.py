@@ -1,18 +1,25 @@
 from typing import TYPE_CHECKING
+from enum import Enum
 
 from PyQt5.QtCore import QPointF
 
 from .graphics_item import SocketGraphicsItem
+
 if TYPE_CHECKING:
     from . import Edge
     from . import Node
     from .. import Module
 
 
+class SocketType(Enum):
+    BIT = 1
+
+
 class Socket:
-    def __init__(self, node: "Node", socket_type):
+    def __init__(self, node: "Node", name: str, socket_type: SocketType):
         self._node: "Node" = node
-        self._type = socket_type
+        self._name = name
+        self._type: SocketType = socket_type
 
         self._edges: "[Edge]" = []
 
@@ -25,6 +32,10 @@ class Socket:
     @property
     def node(self) -> "Node":
         return self._node
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def edges(self) -> "[Edge]":

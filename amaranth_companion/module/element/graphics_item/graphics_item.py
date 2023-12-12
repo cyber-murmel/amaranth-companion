@@ -7,7 +7,6 @@ if TYPE_CHECKING:
 class GraphicsItem:
     def __init__(self, element: "ModuleElement", parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        print(element)
         self._element = element
 
     @property

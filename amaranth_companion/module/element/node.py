@@ -4,7 +4,7 @@ from PyQt5.QtCore import QPointF
 
 from .graphics_item.node_graphics_item import NodeGraphicsItem
 from .graphics_item.node_content_widget import NodeContentWidget
-from .socket import Socket
+from .socket import Socket, SocketType
 
 if TYPE_CHECKING:
     from .. import Module
@@ -25,26 +25,26 @@ class Node:
         module: "Module",
         title: str,
         content_widget: NodeContentWidget,
-        input_types: [],
-        output_types: [],
+        inputs: dict[str, SocketType],
+        outputs: dict[str, SocketType],
     ):
         self._module: "Module" = module
         self._content_widget: NodeContentWidget = content_widget
         self._graphics_item: NodeGraphicsItem = NodeGraphicsItem(self, title)
 
-        self._inputs: [Socket] = []
-        self._outputs: [Socket] = []
-        for i in range(len(input_types)):
-            socket = Socket(self, input_types[i])
-            self._inputs.append(socket)
+        self._input_sockets: dict[str, Socket] = {}
+        self._output_sockets: dict[str, Socket] = {}
+        for index, name in enumerate(inputs):
+            socket = Socket(self, name, inputs[name])
+            self._input_sockets.update({name: socket})
             socket.graphics_item.setPos(
-                *self.get_socket_position(i, SocketPosition.LEFT)
+                *self.get_socket_position(index, SocketPosition.LEFT)
             )
-        for i in range(len(output_types)):
-            socket = Socket(self, output_types[i])
-            self._outputs.append(socket)
+        for index, name in enumerate(outputs):
+            socket = Socket(self, name, outputs[name])
+            self._output_sockets.update({name: socket})
             socket.graphics_item.setPos(
-                *self.get_socket_position(i, SocketPosition.RIGHT)
+                *self.get_socket_position(index, SocketPosition.RIGHT)
             )
 
     @property
@@ -68,7 +68,9 @@ class Node:
     def pos(self, coordinates: (float, float)) -> None:
         self._graphics_item.setPos(coordinates[0], coordinates[1])
 
-    def get_socket_position(self, index: int, position: SocketPosition) -> (float, float):
+    def get_socket_position(
+        self, index: int, position: SocketPosition
+    ) -> (float, float):
         x = 0 if (position in (SocketPosition.LEFT,)) else self._graphics_item.width
         y = (2 + index) * self.SOCKET_SPACING
         return x, y

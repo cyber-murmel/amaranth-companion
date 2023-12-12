@@ -10,7 +10,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon, QKeySequence
 
 from ..module import Module
-from ..module.element import Node, Edge
+from ..module.scene import ModuleSceneView
+from ..module.element import Node, Edge, SocketType
 from ..module.element.graphics_item import NodeContentWidget
 
 
@@ -22,7 +23,8 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle("Amaranth Companion")
 
-        self._open_modules = []
+        self._open_modules: [Module] = []
+        self._scene_view: ModuleSceneView = None
 
         self._createActions()
         self._createMenuBar()
@@ -33,7 +35,23 @@ class MainWindow(QMainWindow):
 
     def openModule(self, module):
         self._open_modules.append(module)
-        self.setCentralWidget(module.scene_view)
+
+        if not self._scene_view:
+            self._scene_view = ModuleSceneView(None)
+            self.setCentralWidget(self._scene_view)
+
+        self._scene_view.module = module
+
+    def closeModule(self, module):
+        self._open_modules.remove(module)
+        if self._open_modules:
+            module = self._open_modules[-1]
+
+            self._scene_view.module = module
+        else:
+            self._scene_view.setScene(None)
+            self.setCentralWidget(None)
+            self._scene_view = None
 
     def _createMenuBar(self):
         menuBar = QMenuBar(self)
@@ -45,6 +63,7 @@ class MainWindow(QMainWindow):
         fileMenu.addAction(self.openAction)
         self.openRecentMenu = fileMenu.addMenu("Open Recent")
         fileMenu.addAction(self.saveAction)
+        fileMenu.addAction(self.closeAction)
         fileMenu.addSeparator()
         fileMenu.addAction(self.exitAction)
 
@@ -109,17 +128,19 @@ class MainWindow(QMainWindow):
         ## Creating actions using the second constructor
         self.openAction = QAction(QIcon(":open.svg"), "&Open...", self)
         self.saveAction = QAction(QIcon(":save.svg"), "&Save", self)
+        self.closeAction = QAction("&Close", self)
         self.exitAction = QAction("&Exit", self)
         ## Using string-based key sequences
         self.newAction.setShortcut("Ctrl+N")
         self.openAction.setShortcut("Ctrl+O")
         self.saveAction.setShortcut("Ctrl+S")
+        self.closeAction.setShortcut("Ctrl+W")
         self.exitAction.setShortcut("Ctrl+Q")
         # Edit actions
         self.copyAction = QAction(QIcon(":copy.svg"), "&Copy", self)
         self.pasteAction = QAction(QIcon(":paste.svg"), "&Paste", self)
         self.cutAction = QAction(QIcon(":cut.svg"), "C&ut", self)
-        ## Using standard keys
+        # Using standard keys
         self.copyAction.setShortcut(QKeySequence.Copy)
         self.pasteAction.setShortcut(QKeySequence.Paste)
         self.cutAction.setShortcut(QKeySequence.Cut)
@@ -129,10 +150,6 @@ class MainWindow(QMainWindow):
         self.zoomInAction.setShortcut("Ctrl++")
         self.zoomInAction.setShortcut("Ctrl+=")
         self.zoomOutAction.setShortcut("Ctrl+-")
-        ## Using standard keys
-        self.copyAction.setShortcut(QKeySequence.Copy)
-        self.pasteAction.setShortcut(QKeySequence.Paste)
-        self.cutAction.setShortcut(QKeySequence.Cut)
         # Help actions
         self.helpContentAction = QAction("&Help Content", self)
         self.aboutAction = QAction("&About", self)
@@ -145,6 +162,7 @@ class MainWindow(QMainWindow):
         self.newAction.setToolTip(newTip)
         self.openAction.triggered.connect(self.openFile)
         self.saveAction.triggered.connect(self.saveFile)
+        self.closeAction.triggered.connect(self.closeFile)
         self.exitAction.triggered.connect(self.close)
         # Connect Edit actions
         self.copyAction.triggered.connect(self.copyContent)
@@ -167,25 +185,44 @@ class MainWindow(QMainWindow):
         # self.module.scene.addDebugContent()
         nodes: [Node] = []
         for i in range(3):
-            node = Node(module, f"{i}", NodeContentWidget(), [1, 1, 1], [1, 1])
+            inputs = {
+                "a": SocketType.BIT,
+                "b": SocketType.BIT,
+            }
+            outputs = {
+                "o": SocketType.BIT,
+            }
+            node = Node(module, f"{i}", NodeContentWidget(), inputs, outputs)
             module.addNode(node)
             node.pos = (-300 + i * 300, -300 + i * 100)
             nodes.append(node)
 
-        edge = Edge(nodes[0]._outputs[0], nodes[1]._inputs[0])
+        edge = Edge(nodes[0]._output_sockets["o"], nodes[1]._input_sockets["a"])
 
         module.addEdge(edge)
 
         self.openModule(module)
 
     def openFile(self):
-        pass
+        with open("top.json", "r") as file:
+            module = Module(file)
+            self.openModule(module)
 
     def openRecentFile(self, filename):
         pass
 
     def saveFile(self):
-        pass
+        if self._open_modules:
+            with open("top.json", "w") as file:
+                self._open_modules[-1].serialize(file)
+
+        # for module in self._open_modules:
+        #     print(module.serialize())
+        # pass
+
+    def closeFile(self):
+        if self._open_modules:
+            self.closeModule(self._open_modules[-1])
 
     def copyContent(self):
         pass

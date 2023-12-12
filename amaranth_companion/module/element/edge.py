@@ -6,6 +6,7 @@ from PyQt5.QtCore import QPointF
 from .element import ModuleElement
 from .graphics_item import EdgeGraphicsItem
 from .socket import Socket
+
 if TYPE_CHECKING:
     from .. import Module
 

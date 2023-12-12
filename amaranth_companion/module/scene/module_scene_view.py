@@ -42,12 +42,18 @@ class ModuleSceneView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.setScene(self.scene)
-        self.centerOn(0, 0)
+        # self.setScene(self.scene)
+        # self.centerOn(0, 0)
 
     @property
     def module(self):
         return self._module
+
+    @module.setter
+    def module(self, value):
+        self._module = value
+        self.setScene(self._module.scene)
+        self.centerOn(0, 0)
 
     @property
     def scene(self):
@@ -195,7 +201,8 @@ class ModuleSceneView(QGraphicsView):
             selected_edges = {
                 edge
                 for node in selected_nodes
-                for socket in node._inputs + node._outputs
+                for socket in list(node._input_sockets.values())
+                + list(node._output_sockets.values())
                 for edge in socket._edges
             }
 
@@ -260,8 +267,12 @@ class ModuleSceneView(QGraphicsView):
     def delete_selected(self):
         selected_items = self.scene.selectedItems()
 
-        selected_edge_items = [item for item in selected_items if isinstance(item, EdgeGraphicsItem)]
-        selected_node_items = [item for item in selected_items if isinstance(item, NodeGraphicsItem)]
+        selected_edge_items = [
+            item for item in selected_items if isinstance(item, EdgeGraphicsItem)
+        ]
+        selected_node_items = [
+            item for item in selected_items if isinstance(item, NodeGraphicsItem)
+        ]
 
         for edge_item in selected_edge_items:
             self.module.removeEdge(edge_item.edge)
