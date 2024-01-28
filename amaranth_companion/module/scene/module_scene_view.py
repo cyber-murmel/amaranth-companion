@@ -2,6 +2,8 @@ from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QPainter, QMouseEvent, QTransform
 from PyQt5.QtWidgets import QGraphicsView
 
+from .module_scene_history import ModuleSceneHistory
+
 from amaranth_companion.module.element import Edge
 from amaranth_companion.module.element.graphics_item import (
     EdgeGraphicsItem,
@@ -23,7 +25,10 @@ class ModuleSceneView(QGraphicsView):
     def __init__(self, module, parent=None):
         super().__init__(parent)
 
-        self._module = module
+        if module:
+            self._module = module
+            self._history = ModuleSceneHistory(self._module)
+            self._history.check_in()
 
         self._node_edit = False
         self._zoom = 0
@@ -57,10 +62,8 @@ class ModuleSceneView(QGraphicsView):
         self._module = value
         self.setScene(self._module.scene)
         self.centerOn(0, 0)
-
-    @property
-    def scene(self):
-        return self.module.scene
+        self._history = ModuleSceneHistory(self._module)
+        self._history.check_in()
 
     @property
     def node_edit(self):
@@ -187,8 +190,7 @@ class ModuleSceneView(QGraphicsView):
         self._drag_old_pos = node_item.node.pos
 
     def node_drag_end(self, item: NodeGraphicsItem):
-        self._drag_mode = self.DragMode.NONE
-        print(self._drag_old_pos, self._drag_node_item.node.pos)
+        self._history.check_in()
 
     def edge_drag_start(self, socket_item):
         self._drag_mode = ModuleSceneView.DragMode.EDGE
@@ -197,12 +199,12 @@ class ModuleSceneView(QGraphicsView):
         self._drag_edge_item = EdgeGraphicsItem(None)
         self._drag_edge_item.start_point = start_point
         self._drag_edge_item.end_point = start_point
-        self.scene.addItem(self._drag_edge_item)
+        self.scene().addItem(self._drag_edge_item)
 
     def edge_drag_end(self, item):
         self._drag_mode = self.DragMode.NONE
 
-        self.scene.removeItem(self._drag_edge_item)
+        self.scene().removeItem(self._drag_edge_item)
 
         del self._drag_edge_item
 
@@ -286,3 +288,9 @@ class ModuleSceneView(QGraphicsView):
             self.module.removeEdge(edge_item.edge)
         for node_item in selected_node_items:
             self.module.removeNode(node_item.node)
+
+    def undo(self):
+        self._history.undo()
+
+    def redo(self):
+        self._history.redo()
