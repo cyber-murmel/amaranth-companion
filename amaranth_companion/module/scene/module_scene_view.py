@@ -215,6 +215,7 @@ class ModuleSceneView(QGraphicsView):
                 for edge in item.socket.edges:
                     if not (edge is new_edge):
                         self.module.removeEdge(edge)
+            self._history.check_in()
 
     def mouseMoveEvent(self, event):
         if self._drag_mode == self.DragMode.EDGE:
@@ -276,7 +277,7 @@ class ModuleSceneView(QGraphicsView):
             super().keyPressEvent(event)
 
     def delete_selected(self):
-        selected_items = self.scene.selectedItems()
+        selected_items = self.scene().selectedItems()
 
         selected_edge_items = [
             item for item in selected_items if isinstance(item, EdgeGraphicsItem)
@@ -289,6 +290,8 @@ class ModuleSceneView(QGraphicsView):
             self.module.removeEdge(edge_item.edge)
         for node_item in selected_node_items:
             self.module.removeNode(node_item.node)
+
+        self._history.check_in()
 
     def undo(self):
         self._history.undo()
