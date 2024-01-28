@@ -73,6 +73,8 @@ class MainWindow(QMainWindow):
         editMenu.addAction(self.copyAction)
         editMenu.addAction(self.pasteAction)
         editMenu.addAction(self.cutAction)
+        editMenu.addAction(self.undoAction)
+        editMenu.addAction(self.redoAction)
 
         editMenu.addSeparator()
         ## Find and Replace submenu in the Edit menu
@@ -140,10 +142,14 @@ class MainWindow(QMainWindow):
         self.copyAction = QAction(QIcon(":copy.svg"), "&Copy", self)
         self.pasteAction = QAction(QIcon(":paste.svg"), "&Paste", self)
         self.cutAction = QAction(QIcon(":cut.svg"), "C&ut", self)
+        self.undoAction = QAction("U&ndo", self)
+        self.redoAction = QAction("&Redo", self)
         # Using standard keys
         self.copyAction.setShortcut(QKeySequence.Copy)
         self.pasteAction.setShortcut(QKeySequence.Paste)
         self.cutAction.setShortcut(QKeySequence.Cut)
+        self.undoAction.setShortcut(QKeySequence.Undo)
+        self.redoAction.setShortcut(QKeySequence.Redo)
         # view actions
         self.zoomInAction = QAction(QIcon(":zoom-in.svg"), "Zoom &In", self)
         self.zoomOutAction = QAction(QIcon(":zoom-out.svg"), "Zoom &Out", self)
@@ -168,6 +174,8 @@ class MainWindow(QMainWindow):
         self.copyAction.triggered.connect(self.copyContent)
         self.pasteAction.triggered.connect(self.pasteContent)
         self.cutAction.triggered.connect(self.cutContent)
+        self.undoAction.triggered.connect(self.undo)
+        self.redoAction.triggered.connect(self.redo)
         # Connect Edit actions
         self.zoomInAction.triggered.connect(self.zoomIn)
         self.zoomOutAction.triggered.connect(self.zoomOut)
@@ -232,6 +240,12 @@ class MainWindow(QMainWindow):
 
     def cutContent(self):
         pass
+
+    def undo(self):
+        self._scene_view.undo()
+
+    def redo(self):
+        self._scene_view.redo()
 
     def zoomIn(self):
         self.scene_view.zoom_in_out(1)
