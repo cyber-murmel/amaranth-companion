@@ -190,6 +190,7 @@ class ModuleSceneView(QGraphicsView):
         self._drag_old_pos = node_item.node.pos
 
     def node_drag_end(self, item: NodeGraphicsItem):
+        self._drag_mode = ModuleSceneView.DragMode.NONE
         self._history.check_in()
 
     def edge_drag_start(self, socket_item):
@@ -202,7 +203,7 @@ class ModuleSceneView(QGraphicsView):
         self.scene().addItem(self._drag_edge_item)
 
     def edge_drag_end(self, item):
-        self._drag_mode = self.DragMode.NONE
+        self._drag_mode = ModuleSceneView.DragMode.NONE
 
         self.scene().removeItem(self._drag_edge_item)
 
