@@ -11,16 +11,18 @@ class NodeProxyWidget(QGraphicsProxyWidget):
         self._item = parent
 
     @property
-    def scene_view(self):
-        return self._item.node.module.scene_view
+    def scene_views(self):
+        return self._item.node.module.scene.views()
 
     # tell the scene if node content is being edited
     def focusInEvent(self, a0):
-        self.scene_view.node_edit = True
+        for scene_view in self.scene_views:
+            scene_view.node_edit = True
         super().focusInEvent(a0)
 
     def focusOutEvent(self, a0):
-        self.scene_view.node_edit = False
+        for scene_view in self.scene_views:
+            scene_view.node_edit = False
         super().focusOutEvent(a0)
 
 
