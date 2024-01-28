@@ -5,8 +5,10 @@ class ModuleSceneHistory:
         self._future: [str] = []
 
     def check_in(self):
-        self._past.append(self._module.to_json())
-        self._future = []
+        serialized_module = self._module.to_json()
+        if (not self._past) or (self._past[-1] != serialized_module):
+            self._past.append(self._module.to_json())
+            self._future = []
 
     @property
     def is_undoable(self):
