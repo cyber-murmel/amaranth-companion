@@ -59,7 +59,7 @@ class Module:
 
         self.scene.removeItem(edge.graphics_item)
 
-    def serialize(self, file):
+    def to_json(self):
         scene = {
             "width": self.scene.scene_width,
             "height": self.scene.scene_height,
@@ -81,16 +81,18 @@ class Module:
             "edges": edges,
         }
 
-        # return file.write(json.dumps(module_dict, cls=ModuleElementEncoder, indent=2))
-        return json.dump(module_dict, file, cls=ModuleElementEncoder, indent=2)
+        return json.dumps(module_dict, cls=ModuleElementEncoder, indent=2)
+
+    def serialize(self, file):
+        return file.write(self.to_json())
 
     def clear(self):
         while self._nodes:
             self.removeNode(self._nodes[0])
 
-    def deserialize(self, file):
+    def from_json(self, text):
+        data = json.loads(text)
         self.clear()
-        data = json.load(file)
 
         for index, node_data in enumerate(data["nodes"]):
             inputs = {
@@ -112,3 +114,7 @@ class Module:
                 end_node._input_sockets[edge_data["end"]["socket_name"]],
             )
             self.addEdge(edge)
+
+    def deserialize(self, file):
+        text = file.read()
+        self.from_json(text)
