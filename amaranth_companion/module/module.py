@@ -46,7 +46,9 @@ class Module:
     def removeNode(self, node):
         self._nodes.remove(node)
 
-        for socket in node._input_sockets + node._output_sockets:
+        for socket in list(node._input_sockets.values()) + list(
+            node._output_sockets.values()
+        ):
             for edge in socket.edges:
                 self.removeEdge(edge)
 
