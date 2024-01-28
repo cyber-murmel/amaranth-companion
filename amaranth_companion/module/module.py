@@ -10,15 +10,12 @@ from .element.graphics_item import NodeContentWidget
 
 from amaranth_companion import __version__
 
-# import module_pb2
-
 
 class Module:
     def __init__(self, file=None):
         self._nodes = []
 
         self._scene = ModuleScene()
-        self._scene_view = ModuleSceneView(self)
 
         if file:
             self.deserialize(file)
@@ -39,7 +36,6 @@ class Module:
         if (edge.start_socket.name in edge.start_socket.node._output_sockets) and (
             edge.end_socket.name in edge.end_socket.node._input_sockets
         ):
-            # self._edges.append(edge)
             self.scene.addItem(edge.graphics_item)
             return True
 
