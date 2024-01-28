@@ -224,10 +224,6 @@ class MainWindow(QMainWindow):
             with open("top.json", "w") as file:
                 self._open_modules[-1].serialize(file)
 
-        # for module in self._open_modules:
-        #     print(module.serialize())
-        # pass
-
     def closeFile(self):
         if self._open_modules:
             self.closeModule(self._open_modules[-1])
