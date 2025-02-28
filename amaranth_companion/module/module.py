@@ -104,7 +104,8 @@ class Module:
             outputs = {
                 "o": SocketType.BIT,
             }
-            node = Node(self, f"{index}", NodeContentWidget(), inputs, outputs)
+            text = node_data["text"] if "text" in node_data else ""
+            node = Node(self, f"{index}", NodeContentWidget(text=text), inputs, outputs)
             node.pos = node_data["pos"]
             self.addNode(node)
 

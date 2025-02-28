@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 
 
 class NodeContentWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, text=""):
         super().__init__(parent)
 
         self.layout = QVBoxLayout()
@@ -11,4 +11,6 @@ class NodeContentWidget(QWidget):
 
         self.wdg_label = QLabel("Some Title")
         self.layout.addWidget(self.wdg_label)
-        self.layout.addWidget(QTextEdit("foo"))
+        self.text_edit = QTextEdit()
+        self.text_edit.insertPlainText(text)
+        self.layout.addWidget(self.text_edit)

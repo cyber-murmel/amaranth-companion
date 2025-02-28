@@ -71,6 +71,9 @@ class ModuleSceneView(QGraphicsView):
 
     @node_edit.setter
     def node_edit(self, val):
+        # save state when done editing
+        if self._node_edit and not val:
+            self._history.check_in()
         self._node_edit = val
 
     def mousePressEvent(self, event):

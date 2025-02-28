@@ -8,7 +8,7 @@ from .element import ModuleElement
 class ModuleElementEncoder(JSONEncoder):
     def default(self, obj: ModuleElement):
         if isinstance(obj, Node):
-            return {"pos": obj.pos}
+            return {"pos": obj.pos, "text": obj.content_widget.text_edit.toPlainText()}
         if isinstance(obj, Edge):
             module = obj.module
             start_socket = obj.start_socket

@@ -1,0 +1,62 @@
+{
+  "version": "0.1.0",
+  "scene": {
+    "width": 80000,
+    "height": 60000
+  },
+  "nodes": [
+    {
+      "pos": [
+        -420.0,
+        -200.0
+      ],
+      "text": "osfjodsjf\nsdfoisdfjio\nsdfsdfi\nsdf"
+    },
+    {
+      "pos": [
+        -60.0,
+        0.0
+      ],
+      "text": ""
+    },
+    {
+      "pos": [
+        300.0,
+        -100.0
+      ],
+      "text": ""
+    }
+  ],
+  "edges": [
+    {
+      "start": {
+        "node_index": 0,
+        "socket_name": "o"
+      },
+      "end": {
+        "node_index": 2,
+        "socket_name": "b"
+      }
+    },
+    {
+      "start": {
+        "node_index": 1,
+        "socket_name": "o"
+      },
+      "end": {
+        "node_index": 2,
+        "socket_name": "a"
+      }
+    },
+    {
+      "start": {
+        "node_index": 0,
+        "socket_name": "o"
+      },
+      "end": {
+        "node_index": 1,
+        "socket_name": "b"
+      }
+    }
+  ]
+}
