@@ -1,5 +1,7 @@
 from functools import partial
 
+import json
+
 from PyQt5.QtWidgets import (
     QMainWindow,
     QMenuBar,
@@ -7,12 +9,16 @@ from PyQt5.QtWidgets import (
     QToolBar,
     QAction,
 )
-from PyQt5.QtGui import QIcon, QKeySequence
+from PyQt5.QtGui import QIcon, QKeySequence, QGuiApplication
 
 from ..module import Module
 from ..module.scene import ModuleSceneView
-from ..module.element import Node, Edge, SocketType
-from ..module.element.graphics_item import NodeContentWidget
+from ..module.element import Node, Edge, SocketType, ModuleElementEncoder
+from ..module.element.graphics_item import (
+    EdgeGraphicsItem,
+    NodeContentWidget,
+    NodeGraphicsItem,
+)
 
 
 class MainWindow(QMainWindow):
@@ -229,7 +235,31 @@ class MainWindow(QMainWindow):
             self.closeModule(self._open_modules[-1])
 
     def copyContent(self):
-        pass
+        clipboard = QGuiApplication.clipboard()
+        selected_items = self._scene_view.scene().selectedItems()
+        selected_nodes = [
+            item.node for item in selected_items if isinstance(item, NodeGraphicsItem)
+        ]
+        selected_edges = [
+            item.edge for item in selected_items if isinstance(item, EdgeGraphicsItem)
+        ]
+        valid_edges = [
+            edge
+            for edge in selected_edges
+            if (edge.start_socket.node in selected_nodes)
+            and (edge.end_socket.node in selected_nodes)
+        ]
+        for edge in selected_edges:
+            if edge not in valid_edges:
+                edge.graphics_item.setSelected(False)
+
+        selection_dict = {
+            "nodes": selected_nodes,
+            "edges": valid_edges,
+        }
+        text = json.dumps(selection_dict, cls=ModuleElementEncoder, indent=2)
+
+        clipboard.setText(text)
 
     def pasteContent(self):
         pass
