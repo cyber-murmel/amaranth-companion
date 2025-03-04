@@ -237,17 +237,19 @@ class MainWindow(QMainWindow):
     def copyContent(self):
         clipboard = QGuiApplication.clipboard()
         selected_items = self._scene_view.scene().selectedItems()
-        selected_nodes = [
-            item.node for item in selected_items if isinstance(item, NodeGraphicsItem)
-        ]
+        selected_nodes = {
+            item.node.uuid: item.node
+            for item in selected_items
+            if isinstance(item, NodeGraphicsItem)
+        }
         selected_edges = [
             item.edge for item in selected_items if isinstance(item, EdgeGraphicsItem)
         ]
         valid_edges = [
             edge
             for edge in selected_edges
-            if (edge.start_socket.node in selected_nodes)
-            and (edge.end_socket.node in selected_nodes)
+            if (edge.start_socket.node in selected_nodes.values())
+            and (edge.end_socket.node in selected_nodes.values())
         ]
         for edge in selected_edges:
             if edge not in valid_edges:
@@ -262,7 +264,38 @@ class MainWindow(QMainWindow):
         clipboard.setText(text)
 
     def pasteContent(self):
-        pass
+        clipboard = QGuiApplication.clipboard()
+        text = clipboard.text()
+        uuid_map = {}
+        # try:
+        data = json.loads(text)
+        module = self._open_modules[-1]
+        print(data)
+
+        for old_uuid, node_data in data["nodes"].items():
+            inputs = {
+                "a": SocketType.BIT,
+                "b": SocketType.BIT,
+            }
+            outputs = {
+                "o": SocketType.BIT,
+            }
+            node_text = node_data["text"] if "text" in node_data else ""
+            node = Node(module, f"", NodeContentWidget(text=node_text), inputs, outputs)
+            uuid_map[old_uuid] = node.uuid
+            node.pos = node_data["pos"]
+            module.addNode(node)
+
+        for edge_data in data["edges"]:
+            start_node = module._nodes[uuid_map[edge_data["start"]["node_uuid"]]]
+            end_node = module._nodes[uuid_map[edge_data["end"]["node_uuid"]]]
+            edge = Edge(
+                start_node._output_sockets[edge_data["start"]["socket_name"]],
+                end_node._input_sockets[edge_data["end"]["socket_name"]],
+            )
+            module.addEdge(edge)
+        # except:
+        #     pass
 
     def cutContent(self):
         pass

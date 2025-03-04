@@ -13,7 +13,7 @@ from amaranth_companion import __version__
 
 class Module:
     def __init__(self, file=None):
-        self._nodes = []
+        self._nodes = {}
 
         self._scene = ModuleScene()
 
@@ -29,7 +29,7 @@ class Module:
         return self._scene_view
 
     def addNode(self, node):
-        self._nodes.append(node)
+        self._nodes[node.uuid] = node
         self.scene.addItem(node.graphics_item)
 
     def addEdge(self, edge):
@@ -44,7 +44,7 @@ class Module:
         return False
 
     def removeNode(self, node):
-        self._nodes.remove(node)
+        del self._nodes[node.id]
 
         for socket in list(node._input_sockets.values()) + list(
             node._output_sockets.values()
@@ -70,7 +70,7 @@ class Module:
         edges = list(
             {
                 edge
-                for node in self._nodes
+                for node in self._nodes.values()
                 for socket in list(node._output_sockets.values())
                 for edge in socket._edges
             }
@@ -96,7 +96,7 @@ class Module:
         data = json.loads(text)
         self.clear()
 
-        for index, node_data in enumerate(data["nodes"]):
+        for uuid, node_data in data["nodes"].items():
             inputs = {
                 "a": SocketType.BIT,
                 "b": SocketType.BIT,
@@ -105,13 +105,15 @@ class Module:
                 "o": SocketType.BIT,
             }
             text = node_data["text"] if "text" in node_data else ""
-            node = Node(self, f"{index}", NodeContentWidget(text=text), inputs, outputs)
+            node = Node(
+                self, f"{uuid}", NodeContentWidget(text=text), inputs, outputs, uuid
+            )
             node.pos = node_data["pos"]
             self.addNode(node)
 
         for edge_data in data["edges"]:
-            start_node = self._nodes[edge_data["start"]["node_index"]]
-            end_node = self._nodes[edge_data["end"]["node_index"]]
+            start_node = self._nodes[edge_data["start"]["node_uuid"]]
+            end_node = self._nodes[edge_data["end"]["node_uuid"]]
             edge = Edge(
                 start_node._output_sockets[edge_data["start"]["socket_name"]],
                 end_node._input_sockets[edge_data["end"]["socket_name"]],

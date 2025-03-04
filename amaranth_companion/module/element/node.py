@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import TYPE_CHECKING
 from PyQt5.QtCore import QPointF
+from uuid import uuid4
 
 from .graphics_item.node_graphics_item import NodeGraphicsItem
 from .graphics_item.node_content_widget import NodeContentWidget
@@ -27,10 +28,12 @@ class Node:
         content_widget: NodeContentWidget,
         inputs: dict[str, SocketType],
         outputs: dict[str, SocketType],
+        uuid=None,
     ):
         self._module: "Module" = module
         self._content_widget: NodeContentWidget = content_widget
         self._graphics_item: NodeGraphicsItem = NodeGraphicsItem(self, title)
+        self._uuid = uuid if uuid else uuid4().hex
 
         self._input_sockets: dict[str, Socket] = {}
         self._output_sockets: dict[str, Socket] = {}
@@ -46,6 +49,10 @@ class Node:
             socket.graphics_item.setPos(
                 *self.get_socket_position(index, SocketPosition.RIGHT)
             )
+
+    @property
+    def uuid(self) -> (float, float):
+        return self._uuid
 
     @property
     def module(self) -> "Module":

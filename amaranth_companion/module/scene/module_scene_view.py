@@ -228,7 +228,9 @@ class ModuleSceneView(QGraphicsView):
 
         if self.module:
             selected_nodes = [
-                node for node in self.module._nodes if node.graphics_item.isSelected()
+                node
+                for node in self.module._nodes.values()
+                if node.graphics_item.isSelected()
             ]
 
             selected_edges = {
