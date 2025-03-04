@@ -44,7 +44,7 @@ class Module:
         return False
 
     def removeNode(self, node):
-        del self._nodes[node.id]
+        del self._nodes[node.uuid]
 
         for socket in list(node._input_sockets.values()) + list(
             node._output_sockets.values()
@@ -89,8 +89,9 @@ class Module:
         return file.write(self.to_json())
 
     def clear(self):
-        while self._nodes:
-            self.removeNode(self._nodes[0])
+        for node in list(self._nodes.values()):
+        # while self._nodes:
+            self.removeNode(node)
 
     def from_json(self, text):
         data = json.loads(text)

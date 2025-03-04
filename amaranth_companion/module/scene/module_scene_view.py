@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QPainter, QMouseEvent, QTransform
-from PyQt5.QtWidgets import QGraphicsView
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsTextItem
 
 from .module_scene_history import ModuleSceneHistory
 
@@ -107,6 +107,8 @@ class ModuleSceneView(QGraphicsView):
 
             if type(item) is NodeGraphicsItem:
                 self.node_drag_start(item)
+            if type(item) is QGraphicsTextItem:
+                self.node_drag_start(item.parentItem())
 
         if self._drag_mode == self.DragMode.EDGE:
             self.edge_drag_end(item)

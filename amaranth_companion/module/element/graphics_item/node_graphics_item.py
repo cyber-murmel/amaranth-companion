@@ -100,7 +100,9 @@ class NodeGraphicsItem(GraphicsItem, QGraphicsItem):
             value.setX(round(value.x() / grid_size) * grid_size)
             value.setY(round(value.y() / grid_size) * grid_size)
 
-        return value
+            return value
+        else:
+            return super().itemChange(change, value)
 
     def boundingRect(self):
         return QRectF(0, 0, self.width, self.height).normalized()
