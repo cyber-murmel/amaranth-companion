@@ -13,6 +13,7 @@ from amaranth_companion import __version__
 
 class Module:
     def __init__(self, file=None):
+        self._path = None
         self._nodes = {}
 
         self._scene = ModuleScene()
@@ -86,6 +87,7 @@ class Module:
         return json.dumps(module_dict, cls=ModuleElementEncoder, indent=2)
 
     def serialize(self, file):
+        self._path = file.name
         return file.write(self.to_json())
 
     def clear(self):
@@ -107,7 +109,7 @@ class Module:
             }
             text = node_data["text"] if "text" in node_data else ""
             node = Node(
-                self, f"{uuid}", NodeContentWidget(text=text), inputs, outputs, uuid
+                self, NodeContentWidget(text=text), inputs, outputs, uuid
             )
             node.pos = node_data["pos"]
             self.addNode(node)
@@ -122,5 +124,6 @@ class Module:
             self.addEdge(edge)
 
     def deserialize(self, file):
+        self._path = file.name
         text = file.read()
         self.from_json(text)

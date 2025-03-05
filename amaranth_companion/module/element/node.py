@@ -24,7 +24,7 @@ class Node:
     def __init__(
         self,
         module: "Module",
-        title: str,
+        # title: str,
         content_widget: NodeContentWidget,
         inputs: dict[str, SocketType],
         outputs: dict[str, SocketType],
@@ -32,8 +32,8 @@ class Node:
     ):
         self._module: "Module" = module
         self._content_widget: NodeContentWidget = content_widget
-        self._graphics_item: NodeGraphicsItem = NodeGraphicsItem(self, title)
         self._uuid = uuid if uuid else uuid4().hex
+        self._graphics_item: NodeGraphicsItem = NodeGraphicsItem(self, self._uuid[:8])
 
         self._input_sockets: dict[str, Socket] = {}
         self._output_sockets: dict[str, Socket] = {}

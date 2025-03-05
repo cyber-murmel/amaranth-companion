@@ -1,4 +1,5 @@
 from functools import partial
+from os.path import isfile
 
 import json
 
@@ -8,6 +9,7 @@ from PyQt5.QtWidgets import (
     QMenu,
     QToolBar,
     QAction,
+    QFileDialog,
 )
 from PyQt5.QtGui import QIcon, QKeySequence, QGuiApplication
 
@@ -136,12 +138,14 @@ class MainWindow(QMainWindow):
         ## Creating actions using the second constructor
         self.openAction = QAction(QIcon(":open.svg"), "&Open...", self)
         self.saveAction = QAction(QIcon(":save.svg"), "&Save", self)
+        self.saveAsAction = QAction('Save &As...', self)
         self.closeAction = QAction("&Close", self)
         self.exitAction = QAction("&Exit", self)
         ## Using string-based key sequences
         self.newAction.setShortcut("Ctrl+N")
         self.openAction.setShortcut("Ctrl+O")
-        self.saveAction.setShortcut("Ctrl+S")
+        self.saveAction.setShortcut(QKeySequence.Save)
+        self.saveAsAction.setShortcut(QKeySequence.SaveAs)
         self.closeAction.setShortcut("Ctrl+W")
         self.exitAction.setShortcut("Ctrl+Q")
         # Edit actions
@@ -174,6 +178,7 @@ class MainWindow(QMainWindow):
         self.newAction.setToolTip(newTip)
         self.openAction.triggered.connect(self.openFile)
         self.saveAction.triggered.connect(self.saveFile)
+        self.saveAsAction.triggered.connect(self.saveAsFile)
         self.closeAction.triggered.connect(self.closeFile)
         self.exitAction.triggered.connect(self.close)
         # Connect Edit actions
@@ -206,7 +211,7 @@ class MainWindow(QMainWindow):
             outputs = {
                 "o": SocketType.BIT,
             }
-            node = Node(module, f"{i}", NodeContentWidget(), inputs, outputs)
+            node = Node(module, NodeContentWidget(), inputs, outputs)
             module.addNode(node)
             node.pos = (-300 + i * 300, -300 + i * 100)
             nodes.append(node)
@@ -218,17 +223,41 @@ class MainWindow(QMainWindow):
         self.openModule(module)
 
     def openFile(self):
-        with open("top.json", "r") as file:
-            module = Module(file)
-            self.openModule(module)
+        fname, filter = QFileDialog.getOpenFileName(self, 'Open graph from file', '','Graph (*.json);;All files (*)')
+        if fname != '' and isfile(fname):
+            with open(fname, "r") as file:
+                module = Module(file)
+                self.openModule(module)
 
     def openRecentFile(self, filename):
         pass
 
     def saveFile(self):
         if self._open_modules:
-            with open("top.json", "w") as file:
-                self._open_modules[-1].serialize(file)
+            module = self._open_modules[-1]
+            if not module._path:
+                return self.saveAsFile()
+            else:
+                with open(module._path, "w") as file:
+                    module.serialize(file)
+
+    def saveAsFile(self):
+        if self._open_modules:
+            module = self._open_modules[-1]
+            fname, filter = QFileDialog.getSaveFileName(self, 'Save graph to file', '','Graph (*.json);;All files (*)')
+            if fname == '': return False
+
+            # self.onBeforeSaveAs(current_nodeeditor, fname)
+            with open(fname, "w") as file:
+                module.serialize(file)
+            # self.statusBar().showMessage("Successfully saved as %s" % current_nodeeditor.filename, 5000)
+
+            # # support for MDI app
+            # if hasattr(current_nodeeditor, "setTitle"):
+            #     current_nodeeditor.setTitle()
+            # else:
+            #     self.setTitle()
+
 
     def closeFile(self):
         if self._open_modules:
