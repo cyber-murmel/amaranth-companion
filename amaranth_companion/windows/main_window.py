@@ -1,361 +1,293 @@
-from functools import partial
-from os.path import isfile
+from logging import getLogger
 
-import json
-
+from PyQt5.QtGui import QGuiApplication, QIcon, QKeySequence
 from PyQt5.QtWidgets import (
-    QMainWindow,
-    QMenuBar,
-    QMenu,
-    QToolBar,
     QAction,
     QFileDialog,
+    QMainWindow,
+    QMenu,
+    QMenuBar,
+    QMessageBox,
+    QToolBar,
 )
-from PyQt5.QtGui import QIcon, QKeySequence, QGuiApplication
 
+from .. import __version__
 from ..module import Module
-from ..module.scene import ModuleSceneView
-from ..module.element import Node, Edge, SocketType, ModuleElementEncoder
+from ..module.element import Edge, Node, SocketType
 from ..module.element.graphics_item import (
     EdgeGraphicsItem,
     NodeContentWidget,
     NodeGraphicsItem,
 )
+from ..module.scene import ModuleSceneView
+from ..module.serialization import (
+    dumps,
+    internal_edges,
+    loads,
+    selection_to_dict,
+)
+from .actions import ACTIONS, MENUS, SEPARATOR, TOOLBARS, SubmenuSpec
+
+log = getLogger(__name__)
+
+FILE_FILTER = "Graph (*.json);;All files (*)"
+
+#: socket layout of the placeholder nodes created by "New"
+DEMO_INPUTS = {"a": SocketType.BIT, "b": SocketType.BIT}
+DEMO_OUTPUTS = {"o": SocketType.BIT}
+DEMO_NODE_COUNT = 3
 
 
 class MainWindow(QMainWindow):
     """Main Window."""
 
     def __init__(self, parent=None):
-        """Initializer."""
         super().__init__(parent)
         self.setWindowTitle("Amaranth Companion")
 
-        self._open_modules: [Module] = []
-        self._scene_view: ModuleSceneView = None
+        self._open_modules: list[Module] = []
+        self._scene_view: ModuleSceneView | None = None
 
-        self._createActions()
-        self._createMenuBar()
-        self._createToolBars()
-        self._createStatusBar()
-        self._createContextMenu()
-        self._connectActions()
+        self._create_actions()
+        self._create_menu_bar()
+        self._create_tool_bars()
+        self._create_status_bar()
 
-    def openModule(self, module):
+    # --- construction ------------------------------------------------------
+
+    def _create_actions(self) -> None:
+        for spec in ACTIONS:
+            action = QAction(spec.text, self)
+            if spec.icon:
+                action.setIcon(QIcon(spec.icon))
+            if spec.shortcuts:
+                action.setShortcuts([QKeySequence(s) for s in spec.shortcuts])
+            if spec.tip:
+                action.setStatusTip(spec.tip)
+                action.setToolTip(spec.tip)
+            action.triggered.connect(getattr(self, spec.slot))
+            setattr(self, self._action_attr(spec.name), action)
+
+    @staticmethod
+    def _action_attr(name: str) -> str:
+        return f"{name}_action"
+
+    def _action(self, name: str) -> QAction:
+        return getattr(self, self._action_attr(name))
+
+    def _create_menu_bar(self) -> None:
+        menu_bar = QMenuBar(self)
+
+        for title, entries in MENUS:
+            menu = menu_bar.addMenu(title)
+            for entry in entries:
+                if entry is SEPARATOR:
+                    menu.addSeparator()
+                elif isinstance(entry, SubmenuSpec):
+                    self._add_placeholder_submenu(menu, entry)
+                else:
+                    menu.addAction(self._action(entry))
+
+        self.setMenuBar(menu_bar)
+
+    @staticmethod
+    def _add_placeholder_submenu(parent: QMenu, spec: SubmenuSpec) -> None:
+        submenu = parent.addMenu(spec.title)
+        for text in spec.placeholders:
+            submenu.addAction(text).setEnabled(False)
+
+    def _create_tool_bars(self) -> None:
+        for title, names in TOOLBARS:
+            tool_bar = QToolBar(title, self)
+            tool_bar.setMovable(False)
+            for name in names:
+                tool_bar.addAction(self._action(name))
+            self.addToolBar(tool_bar)
+
+    def _create_status_bar(self) -> None:
+        self.statusbar = self.statusBar()
+        self.statusbar.showMessage("Ready", 3000)
+
+    # --- open modules ------------------------------------------------------
+
+    @property
+    def current_module(self) -> Module | None:
+        return self._open_modules[-1] if self._open_modules else None
+
+    @property
+    def current_view(self) -> ModuleSceneView | None:
+        return self._scene_view
+
+    def open_module(self, module: Module) -> None:
         self._open_modules.append(module)
 
-        if not self._scene_view:
-            self._scene_view = ModuleSceneView(None)
+        if self._scene_view is None:
+            self._scene_view = ModuleSceneView()
             self.setCentralWidget(self._scene_view)
 
         self._scene_view.module = module
 
-    def closeModule(self, module):
+    def close_module(self, module: Module) -> None:
         self._open_modules.remove(module)
-        if self._open_modules:
-            module = self._open_modules[-1]
 
-            self._scene_view.module = module
-        else:
-            self._scene_view.setScene(None)
-            self.setCentralWidget(None)
-            self._scene_view = None
+        if self.current_module is not None:
+            self._scene_view.module = self.current_module
+            return
 
-    def _createMenuBar(self):
-        menuBar = QMenuBar(self)
-        # File menu
-        ## Creating menus using a QMenu object
-        fileMenu = QMenu("&File", self)
-        menuBar.addMenu(fileMenu)  #
-        fileMenu.addAction(self.newAction)
-        fileMenu.addAction(self.openAction)
-        self.openRecentMenu = fileMenu.addMenu("Open Recent")
-        fileMenu.addAction(self.saveAction)
-        fileMenu.addAction(self.closeAction)
-        fileMenu.addSeparator()
-        fileMenu.addAction(self.exitAction)
+        self._scene_view.setScene(None)
+        # QMainWindow takes ownership, so the old view is destroyed here
+        self.setCentralWidget(None)
+        self._scene_view = None
 
-        # Edit menu
-        ## Creating menus using a title
-        editMenu = menuBar.addMenu("&Edit")
-        editMenu.addAction(self.copyAction)
-        editMenu.addAction(self.pasteAction)
-        editMenu.addAction(self.cutAction)
-        editMenu.addAction(self.undoAction)
-        editMenu.addAction(self.redoAction)
+    # --- file actions ------------------------------------------------------
 
-        editMenu.addSeparator()
-        ## Find and Replace submenu in the Edit menu
-        findMenu = editMenu.addMenu("Find and Replace")
-        findMenu.addAction("Find...")
-        findMenu.addAction("Replace...")
-
-        # Help menu
-        viewMenu = menuBar.addMenu("&View")
-        viewMenu.addAction(self.zoomInAction)
-        viewMenu.addAction(self.zoomOutAction)
-
-        # Help menu
-        helpMenu = menuBar.addMenu("&Help")
-        helpMenu.addAction(self.helpContentAction)
-        helpMenu.addAction(self.aboutAction)
-
-        self.setMenuBar(menuBar)
-
-    def _createToolBars(self):
-        # Using a title
-        fileToolBar = self.addToolBar("File")
-        fileToolBar.addAction(self.newAction)
-        fileToolBar.addAction(self.openAction)
-        fileToolBar.addAction(self.saveAction)
-        fileToolBar.setMovable(False)
-        # Using a QToolBar object
-        editToolBar = QToolBar("Edit", self)
-        self.addToolBar(editToolBar)
-        editToolBar.addAction(self.copyAction)
-        editToolBar.addAction(self.pasteAction)
-        editToolBar.addAction(self.cutAction)
-        # Using a QToolBar object
-        viewToolBar = QToolBar("View", self)
-        self.addToolBar(viewToolBar)
-        viewToolBar.addAction(self.zoomInAction)
-        viewToolBar.addAction(self.zoomOutAction)
-        # # Using a QToolBar object and a toolbar area
-        # helpToolBar = QToolBar("Help", self)
-        # self.addToolBar(Qt.LeftToolBarArea, helpToolBar)
-
-    def _createStatusBar(self):
-        self.statusbar = self.statusBar()
-        # Adding a temporary message
-        self.statusbar.showMessage("Ready", 3000)
-
-    def _createActions(self):
-        # File actions
-        ## Creating action using the first constructor
-        self.newAction = QAction(self)
-        self.newAction.setText("&New")
-        self.newAction.setIcon(QIcon(":new.svg"))
-        ## Creating actions using the second constructor
-        self.openAction = QAction(QIcon(":open.svg"), "&Open...", self)
-        self.saveAction = QAction(QIcon(":save.svg"), "&Save", self)
-        self.saveAsAction = QAction('Save &As...', self)
-        self.closeAction = QAction("&Close", self)
-        self.exitAction = QAction("&Exit", self)
-        ## Using string-based key sequences
-        self.newAction.setShortcut("Ctrl+N")
-        self.openAction.setShortcut("Ctrl+O")
-        self.saveAction.setShortcut(QKeySequence.Save)
-        self.saveAsAction.setShortcut(QKeySequence.SaveAs)
-        self.closeAction.setShortcut("Ctrl+W")
-        self.exitAction.setShortcut("Ctrl+Q")
-        # Edit actions
-        self.copyAction = QAction(QIcon(":copy.svg"), "&Copy", self)
-        self.pasteAction = QAction(QIcon(":paste.svg"), "&Paste", self)
-        self.cutAction = QAction(QIcon(":cut.svg"), "C&ut", self)
-        self.undoAction = QAction("U&ndo", self)
-        self.redoAction = QAction("&Redo", self)
-        # Using standard keys
-        self.copyAction.setShortcut(QKeySequence.Copy)
-        self.pasteAction.setShortcut(QKeySequence.Paste)
-        self.cutAction.setShortcut(QKeySequence.Cut)
-        self.undoAction.setShortcut(QKeySequence.Undo)
-        self.redoAction.setShortcut(QKeySequence.Redo)
-        # view actions
-        self.zoomInAction = QAction(QIcon(":zoom-in.svg"), "Zoom &In", self)
-        self.zoomOutAction = QAction(QIcon(":zoom-out.svg"), "Zoom &Out", self)
-        self.zoomInAction.setShortcut("Ctrl++")
-        self.zoomInAction.setShortcut("Ctrl+=")
-        self.zoomOutAction.setShortcut("Ctrl+-")
-        # Help actions
-        self.helpContentAction = QAction("&Help Content", self)
-        self.aboutAction = QAction("&About", self)
-
-    def _connectActions(self):
-        # Connect File actions
-        self.newAction.triggered.connect(self.newFile)
-        newTip = "Create a new file"
-        self.newAction.setStatusTip(newTip)
-        self.newAction.setToolTip(newTip)
-        self.openAction.triggered.connect(self.openFile)
-        self.saveAction.triggered.connect(self.saveFile)
-        self.saveAsAction.triggered.connect(self.saveAsFile)
-        self.closeAction.triggered.connect(self.closeFile)
-        self.exitAction.triggered.connect(self.close)
-        # Connect Edit actions
-        self.copyAction.triggered.connect(self.copyContent)
-        self.pasteAction.triggered.connect(self.pasteContent)
-        self.cutAction.triggered.connect(self.cutContent)
-        self.undoAction.triggered.connect(self.undo)
-        self.redoAction.triggered.connect(self.redo)
-        # Connect Edit actions
-        self.zoomInAction.triggered.connect(self.zoomIn)
-        self.zoomOutAction.triggered.connect(self.zoomOut)
-        # Connect Help actions
-        self.helpContentAction.triggered.connect(self.helpContent)
-        self.aboutAction.triggered.connect(self.about)
-        # Connect Open Recent to dynamically populate it
-        self.openRecentMenu.aboutToShow.connect(self.populateOpenRecent)
-
-    def _createContextMenu(self):
-        pass
-
-    def newFile(self):
+    def new_file(self) -> None:
         module = Module()
-        # self.module.scene.addDebugContent()
-        nodes: [Node] = []
-        for i in range(3):
-            inputs = {
-                "a": SocketType.BIT,
-                "b": SocketType.BIT,
-            }
-            outputs = {
-                "o": SocketType.BIT,
-            }
-            node = Node(module, NodeContentWidget(), inputs, outputs)
-            module.addNode(node)
-            node.pos = (-300 + i * 300, -300 + i * 100)
+
+        nodes: list[Node] = []
+        for index in range(DEMO_NODE_COUNT):
+            node = Node(module, NodeContentWidget(), DEMO_INPUTS, DEMO_OUTPUTS)
+            module.add_node(node)
+            node.pos = (-300 + index * 300, -300 + index * 100)
             nodes.append(node)
 
-        edge = Edge(nodes[0]._output_sockets["o"], nodes[1]._input_sockets["a"])
+        module.add_edge(Edge(nodes[0].output_sockets["o"], nodes[1].input_sockets["a"]))
 
-        module.addEdge(edge)
+        # the placeholder content is the baseline, not an undoable step
+        module.history.reset()
+        self.open_module(module)
 
-        self.openModule(module)
+    def open_file(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open graph from file", "", FILE_FILTER
+        )
+        if not path:
+            return
 
-    def openFile(self):
-        fname, filter = QFileDialog.getOpenFileName(self, 'Open graph from file', '','Graph (*.json);;All files (*)')
-        if fname != '' and isfile(fname):
-            with open(fname, "r") as file:
-                module = Module(file)
-                self.openModule(module)
+        try:
+            module = Module.from_file(path)
+        except (OSError, ValueError, KeyError) as error:
+            self._report(f"Could not open {path}", error)
+            return
 
-    def openRecentFile(self, filename):
-        pass
+        self.open_module(module)
+        self.statusbar.showMessage(f"Opened {path}", 5000)
 
-    def saveFile(self):
-        if self._open_modules:
-            module = self._open_modules[-1]
-            if not module._path:
-                return self.saveAsFile()
-            else:
-                with open(module._path, "w") as file:
-                    module.serialize(file)
+    def save_file(self) -> None:
+        module = self.current_module
+        if module is None:
+            return
 
-    def saveAsFile(self):
-        if self._open_modules:
-            module = self._open_modules[-1]
-            fname, filter = QFileDialog.getSaveFileName(self, 'Save graph to file', '','Graph (*.json);;All files (*)')
-            if fname == '': return False
+        if module.path is None:
+            self.save_as_file()
+        else:
+            self._save(module, module.path)
 
-            # self.onBeforeSaveAs(current_nodeeditor, fname)
-            with open(fname, "w") as file:
-                module.serialize(file)
-            # self.statusBar().showMessage("Successfully saved as %s" % current_nodeeditor.filename, 5000)
+    def save_as_file(self) -> None:
+        module = self.current_module
+        if module is None:
+            return
 
-            # # support for MDI app
-            # if hasattr(current_nodeeditor, "setTitle"):
-            #     current_nodeeditor.setTitle()
-            # else:
-            #     self.setTitle()
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save graph to file", "", FILE_FILTER
+        )
+        if path:
+            self._save(module, path)
 
+    def _save(self, module: Module, path: str) -> None:
+        try:
+            module.save(path)
+        except OSError as error:
+            self._report(f"Could not save to {path}", error)
+            return
 
-    def closeFile(self):
-        if self._open_modules:
-            self.closeModule(self._open_modules[-1])
+        self.statusbar.showMessage(f"Saved as {path}", 5000)
 
-    def copyContent(self):
-        clipboard = QGuiApplication.clipboard()
-        selected_items = self._scene_view.scene().selectedItems()
-        selected_nodes = {
-            item.node.uuid: item.node
-            for item in selected_items
-            if isinstance(item, NodeGraphicsItem)
-        }
-        selected_edges = [
-            item.edge for item in selected_items if isinstance(item, EdgeGraphicsItem)
+    def close_file(self) -> None:
+        if self.current_module is not None:
+            self.close_module(self.current_module)
+
+    # --- edit actions ------------------------------------------------------
+
+    def copy_content(self) -> None:
+        view = self.current_view
+        if view is None:
+            return
+
+        selected = view.scene().selectedItems()
+        nodes = [item.node for item in selected if isinstance(item, NodeGraphicsItem)]
+        edges = [
+            item.edge
+            for item in selected
+            if isinstance(item, EdgeGraphicsItem) and item.edge is not None
         ]
-        valid_edges = [
-            edge
-            for edge in selected_edges
-            if (edge.start_socket.node in selected_nodes.values())
-            and (edge.end_socket.node in selected_nodes.values())
-        ]
-        for edge in selected_edges:
-            if edge not in valid_edges:
+
+        # an edge with an endpoint outside the selection cannot be pasted, so
+        # drop it from the payload and from the selection shown to the user
+        copyable = internal_edges(nodes, edges)
+        for edge in edges:
+            if edge not in copyable:
                 edge.graphics_item.setSelected(False)
 
-        selection_dict = {
-            "nodes": selected_nodes,
-            "edges": valid_edges,
-        }
-        text = json.dumps(selection_dict, cls=ModuleElementEncoder, indent=2)
+        text = dumps(selection_to_dict(nodes, copyable))
+        QGuiApplication.clipboard().setText(text)
 
-        clipboard.setText(text)
+    def paste_content(self) -> None:
+        module = self.current_module
+        if module is None:
+            return
 
-    def pasteContent(self):
-        clipboard = QGuiApplication.clipboard()
-        text = clipboard.text()
-        uuid_map = {}
-        # try:
-        data = json.loads(text)
-        module = self._open_modules[-1]
-        print(data)
+        try:
+            data = loads(QGuiApplication.clipboard().text())
+            module.paste(data)
+        except (ValueError, KeyError, TypeError) as error:
+            self._report("Clipboard does not contain a module selection", error)
+            return
 
-        for old_uuid, node_data in data["nodes"].items():
-            inputs = {
-                "a": SocketType.BIT,
-                "b": SocketType.BIT,
-            }
-            outputs = {
-                "o": SocketType.BIT,
-            }
-            node_text = node_data["text"] if "text" in node_data else ""
-            node = Node(module, f"", NodeContentWidget(text=node_text), inputs, outputs)
-            uuid_map[old_uuid] = node.uuid
-            node.pos = node_data["pos"]
-            module.addNode(node)
+        module.history.check_in()
 
-        for edge_data in data["edges"]:
-            start_node = module._nodes[uuid_map[edge_data["start"]["node_uuid"]]]
-            end_node = module._nodes[uuid_map[edge_data["end"]["node_uuid"]]]
-            edge = Edge(
-                start_node._output_sockets[edge_data["start"]["socket_name"]],
-                end_node._input_sockets[edge_data["end"]["socket_name"]],
-            )
-            module.addEdge(edge)
-        # except:
-        #     pass
+    def cut_content(self) -> None:
+        view = self.current_view
+        if view is None:
+            return
 
-    def cutContent(self):
-        pass
+        self.copy_content()
+        view.delete_selected()
 
-    def undo(self):
-        self._scene_view.undo()
+    def undo(self) -> None:
+        if self.current_module is not None:
+            self.current_module.history.undo()
 
-    def redo(self):
-        self._scene_view.redo()
+    def redo(self) -> None:
+        if self.current_module is not None:
+            self.current_module.history.redo()
 
-    def zoomIn(self):
-        self.scene_view.zoom_in_out(1)
+    # --- view actions ------------------------------------------------------
 
-    def zoomOut(self):
-        self.scene_view.zoom_in_out(-1)
+    def zoom_in(self) -> None:
+        if self.current_view is not None:
+            self.current_view.zoom_in_out(1)
 
-    def helpContent(self):
-        pass
+    def zoom_out(self) -> None:
+        if self.current_view is not None:
+            self.current_view.zoom_in_out(-1)
 
-    def about(self):
-        pass
+    # --- help actions ------------------------------------------------------
 
-    def populateOpenRecent(self):
-        # Step 1. Remove the old options from the menu
-        self.openRecentMenu.clear()
-        # Step 2. Dynamically create the actions
-        actions = []
-        filenames = [f"File-{n}" for n in range(5)]
-        for filename in filenames:
-            action = QAction(filename, self)
-            action.triggered.connect(partial(self.openRecentFile, filename))
-            actions.append(action)
-        # Step 3. Add the actions to the menu
-        self.openRecentMenu.addActions(actions)
+    def help_content(self) -> None:
+        # TODO: ship user documentation and open it here
+        self.statusbar.showMessage("Help is not available yet", 3000)
+
+    def about(self) -> None:
+        QMessageBox.about(
+            self,
+            "About Amaranth Companion",
+            f"<b>Amaranth Companion</b> {__version__}"
+            "<p>Visual editor for gateware based on amaranth-lang.</p>",
+        )
+
+    # --- helpers -----------------------------------------------------------
+
+    def _report(self, message: str, error: Exception) -> None:
+        log.warning("%s: %s", message, error)
+        self.statusbar.showMessage(message, 5000)

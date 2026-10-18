@@ -1,29 +1,20 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3
 
-from argparse import (
-    ArgumentParser,
-    Action,
-    FileType,
-    ArgumentError,
-    ArgumentTypeError,
-    Namespace,
-)
-from logging import debug, info, warning, error, exception
-from logging import DEBUG, INFO, WARNING, ERROR
+import sys
+from argparse import ArgumentParser, Namespace
+from logging import DEBUG, ERROR, INFO, WARNING, debug
+
 from coloredlogs import install as color_log
+from PyQt5.QtWidgets import QApplication
 
 from .windows.main_window import MainWindow
-from . import qrc_resources
-from PyQt5.QtWidgets import QApplication
-import sys
+from . import qrc_resources  # noqa: F401 - registers the ":*.svg" icon paths
 
 
-def parse_arguments():
+def parse_arguments(argv: list[str] | None = None) -> Namespace:
     parser = ArgumentParser(
-        description="",
-        prog="amaranth_compnaion",
-        epilog="""
-        """,
+        prog="amaranth-companion",
+        description="Visual editor for gateware based on amaranth-lang.",
     )
 
     verbosity = parser.add_mutually_exclusive_group()
@@ -31,30 +22,34 @@ def parse_arguments():
         "-q", "--quiet", action="store_true", help="turn off warnings"
     )
     verbosity.add_argument(
-        "-v", "--verbose", action="count", help="set verbose loglevel"
+        "-v", "--verbose", action="count", default=0, help="set verbose loglevel"
     )
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args(argv)
 
 
-def get_log_level(verbose: int, quiet: bool):
-    return (
-        ERROR if quiet else WARNING if not verbose else INFO if 1 == verbose else DEBUG
-    )  #  2 <= verbose
+def get_log_level(verbose: int, quiet: bool) -> int:
+    if quiet:
+        return ERROR
+    if not verbose:
+        return WARNING
+    return INFO if verbose == 1 else DEBUG
 
 
-def main(args: Namespace):
+def main() -> int:
     app = QApplication(sys.argv)
-    win = MainWindow()
-    win.show()
-    # win.newFile()
+    window = MainWindow()
+    window.show()
     return app.exec_()
 
 
-if "__main__" == __name__:
+def cli() -> int:
+    """Console-script entry point."""
     args = parse_arguments()
     color_log(level=get_log_level(args.verbose, args.quiet))
     debug(args)
-    exit(main(args))
+    return main()
+
+
+if "__main__" == __name__:
+    sys.exit(cli())

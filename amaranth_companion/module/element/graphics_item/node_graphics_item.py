@@ -1,12 +1,17 @@
+from typing import TYPE_CHECKING
+
 from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QPainterPath, QBrush, QPen, QPalette
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsProxyWidget
+from PyQt5.QtGui import QBrush, QPainterPath, QPalette, QPen
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsProxyWidget, QGraphicsTextItem
 
 from .graphics_item import GraphicsItem
 
+if TYPE_CHECKING:
+    from .. import Node
+
 
 class NodeProxyWidget(QGraphicsProxyWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: "NodeGraphicsItem"):
         super().__init__(parent)
         self._item = parent
 
@@ -14,148 +19,137 @@ class NodeProxyWidget(QGraphicsProxyWidget):
     def scene_views(self):
         return self._item.node.module.scene.views()
 
-    # tell the scene if node content is being edited
-    def focusInEvent(self, a0):
+    # tell the scene views whether node content is being edited, so that they
+    # can stop treating key presses as editor shortcuts
+    def focusInEvent(self, event):
         for scene_view in self.scene_views:
             scene_view.node_edit = True
-        super().focusInEvent(a0)
+        super().focusInEvent(event)
 
-    def focusOutEvent(self, a0):
+    def focusOutEvent(self, event):
         for scene_view in self.scene_views:
             scene_view.node_edit = False
-        super().focusOutEvent(a0)
+        super().focusOutEvent(event)
 
 
 class NodeGraphicsItem(GraphicsItem, QGraphicsItem):
-    def __init__(self, node, title: str = "Node", parent=None):
+    WIDTH = 200
+    HEIGHT = 300
+    EDGE_SIZE = 10
+    TITLE_HEIGHT = 24
+
+    def __init__(self, node: "Node", title: str = "Node", parent=None):
         super().__init__(element=node, parent=parent)
 
         self._node = node
 
-        self.width = 200
-        self.height = 300
-        self.edge_size = 10
-        self.title_height = 24
-        self._padding = 4.0
-
-        # select colors
         palette = QPalette()
         self._pen_default = QPen(palette.color(QPalette.Dark))
         self._pen_selected = QPen(palette.color(QPalette.Highlight))
         self._brush_title = QBrush(palette.color(QPalette.Midlight))
         self._brush_background = QBrush(palette.color(QPalette.Light))
 
-        # init title
         self._title_item = QGraphicsTextItem(self)
         self.title = title
 
-        # init content
         self._proxy_widget = NodeProxyWidget(self)
         self.content_widget = self._node.content_widget
 
-        # enable movement
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
 
     @property
-    def node(self):
+    def node(self) -> "Node":
         return self._node
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self._title
 
     @title.setter
-    def title(self, value):
+    def title(self, value: str) -> None:
         self._title = value
-        self._title_item.setPlainText(self._title)
+        self._title_item.setPlainText(value)
 
     @property
     def content_widget(self):
         return self._content
 
     @content_widget.setter
-    def content_widget(self, value):
+    def content_widget(self, value) -> None:
         self._content = value
         self._content.setGeometry(
-            self.edge_size,
-            self.title_height + self.edge_size,
-            self.width - 2 * self.edge_size,
-            self.height - 2 * self.edge_size - self.title_height,
+            self.EDGE_SIZE,
+            self.TITLE_HEIGHT + self.EDGE_SIZE,
+            self.WIDTH - 2 * self.EDGE_SIZE,
+            self.HEIGHT - 2 * self.EDGE_SIZE - self.TITLE_HEIGHT,
         )
         self._proxy_widget.setWidget(self._content)
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionChange:
-            rect = self.scene.sceneRect()
-            grid_size = self.scene.GRID_SIZE
+            return self._constrain_position(value)
 
-            # limit movement to scene
-            if not rect.contains(value):
-                value.setX(min(max(rect.left(), value.x()), rect.right() - grid_size))
-                value.setY(min(max(rect.top(), value.y()), rect.bottom() - grid_size))
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            # keep the attached edges glued to the sockets that just moved
+            for edge in self._node.edges:
+                edge.update_path()
 
-            # place on grid
-            value.setX(round(value.x() / grid_size) * grid_size)
-            value.setY(round(value.y() / grid_size) * grid_size)
+        return super().itemChange(change, value)
 
-            return value
-        else:
-            return super().itemChange(change, value)
+    def _constrain_position(self, value):
+        """Clamp a proposed position to the scene and snap it to the grid."""
+        rect = self.module_scene.sceneRect()
+        grid_size = self.module_scene.GRID_SIZE
+
+        if not rect.contains(value):
+            value.setX(min(max(rect.left(), value.x()), rect.right() - grid_size))
+            value.setY(min(max(rect.top(), value.y()), rect.bottom() - grid_size))
+
+        value.setX(round(value.x() / grid_size) * grid_size)
+        value.setY(round(value.y() / grid_size) * grid_size)
+
+        return value
 
     def boundingRect(self):
-        return QRectF(0, 0, self.width, self.height).normalized()
+        return QRectF(0, 0, self.WIDTH, self.HEIGHT).normalized()
 
-    def paint(self, painter, QStyleOptionGraphicsItem, widget=None, **kwargs):
-        # title
-        path_title = QPainterPath()
-        path_title.setFillRule(Qt.WindingFill)
-        path_title.addRoundedRect(
-            0, 0, self.width, self.title_height, self.edge_size, self.edge_size
-        )
-        path_title.addRect(
-            0, self.title_height - self.edge_size, self.edge_size, self.edge_size
-        )
-        path_title.addRect(
-            self.width - self.edge_size,
-            self.title_height - self.edge_size,
-            self.edge_size,
-            self.edge_size,
-        )
+    def _band(self, top: float, height: float, square_edge: str) -> QPainterPath:
+        """A rounded rect with one of its two horizontal edges squared off.
+
+        The title and content bands meet at a seam; squaring the corners that
+        touch the seam makes the two rounded rects read as one node body.
+        ``square_edge`` is the edge to square: ``"top"`` or ``"bottom"``.
+        """
+        path = QPainterPath()
+        path.setFillRule(Qt.WindingFill)
+        path.addRoundedRect(0, top, self.WIDTH, height, self.EDGE_SIZE, self.EDGE_SIZE)
+
+        seam = top if square_edge == "top" else top + height - self.EDGE_SIZE
+        path.addRect(0, seam, self.EDGE_SIZE, self.EDGE_SIZE)
+        path.addRect(self.WIDTH - self.EDGE_SIZE, seam, self.EDGE_SIZE, self.EDGE_SIZE)
+        return path.simplified()
+
+    def paint(self, painter, style_option, widget=None, **kwargs):
         painter.setPen(Qt.NoPen)
+
         painter.setBrush(self._brush_title)
-        painter.drawPath(path_title.simplified())
+        painter.drawPath(self._band(0, self.TITLE_HEIGHT, square_edge="bottom"))
 
-        # content
-        path_content = QPainterPath()
-        path_content.setFillRule(Qt.WindingFill)
-        path_content.addRoundedRect(
-            0,
-            self.title_height,
-            self.width,
-            self.height - self.title_height,
-            self.edge_size,
-            self.edge_size,
-        )
-        path_content.addRect(0, self.title_height, self.edge_size, self.edge_size)
-        path_content.addRect(
-            self.width - self.edge_size,
-            self.title_height,
-            self.edge_size,
-            self.edge_size,
-        )
-        painter.setPen(Qt.NoPen)
         painter.setBrush(self._brush_background)
-        painter.drawPath(path_content.simplified())
+        painter.drawPath(
+            self._band(
+                self.TITLE_HEIGHT,
+                self.HEIGHT - self.TITLE_HEIGHT,
+                square_edge="top",
+            )
+        )
 
-        # outline
-        path_outline = QPainterPath()
-        path_outline.addRoundedRect(
-            0, 0, self.width, self.height, self.edge_size, self.edge_size
+        outline = QPainterPath()
+        outline.addRoundedRect(
+            0, 0, self.WIDTH, self.HEIGHT, self.EDGE_SIZE, self.EDGE_SIZE
         )
-        painter.setPen(
-            self._pen_default if not self.isSelected() else self._pen_selected
-        )
+        painter.setPen(self._pen_selected if self.isSelected() else self._pen_default)
         painter.setBrush(Qt.NoBrush)
-        painter.drawPath(path_outline.simplified())
+        painter.drawPath(outline.simplified())

@@ -1,129 +1,113 @@
-import json
+from pathlib import Path
+from types import MappingProxyType
+from typing import Iterator, Mapping
 
+from .element import Edge, Node
+from .history import ModuleHistory
 from .scene.module_scene import ModuleScene
-from .scene.module_scene_view import ModuleSceneView
-
-from .element import ModuleElementEncoder
-from .element import Node, Edge, SocketType
-from .element.graphics_item import NodeContentWidget
-
-
-from amaranth_companion import __version__
+from .serialization import dumps, load_into, loads, module_to_dict
 
 
 class Module:
-    def __init__(self, file=None):
-        self._path = None
-        self._nodes = {}
+    """A gateware module: the node graph plus the scene it is drawn on."""
 
+    def __init__(self):
+        self._path: str | None = None
+        self._nodes: dict[str, Node] = {}
         self._scene = ModuleScene()
+        self._history = ModuleHistory(self)
+        self._history.reset()
 
-        if file:
-            self.deserialize(file)
+    # --- identity ----------------------------------------------------------
 
     @property
-    def scene(self):
+    def scene(self) -> ModuleScene:
         return self._scene
 
     @property
-    def scene_view(self):
-        return self._scene_view
+    def history(self) -> ModuleHistory:
+        return self._history
 
-    def addNode(self, node):
+    @property
+    def path(self) -> str | None:
+        """Where this module was last loaded from or saved to."""
+        return self._path
+
+    # --- graph -------------------------------------------------------------
+
+    @property
+    def nodes(self) -> Mapping[str, Node]:
+        return MappingProxyType(self._nodes)
+
+    @property
+    def edges(self) -> Iterator[Edge]:
+        """Every edge in the module, each one once, in a stable order.
+
+        Walking only the *output* sockets is what makes this a deduplication:
+        :meth:`add_edge` guarantees an edge starts at an output and ends at an
+        input, so each edge is reached from exactly one output socket.
+        """
+        for node in self._nodes.values():
+            for socket in node.output_sockets.values():
+                yield from socket.edges
+
+    def add_node(self, node: Node) -> None:
         self._nodes[node.uuid] = node
-        self.scene.addItem(node.graphics_item)
+        self._scene.addItem(node.graphics_item)
 
-    def addEdge(self, edge):
-        if (edge.start_socket.name in edge.start_socket.node._output_sockets) and (
-            edge.end_socket.name in edge.end_socket.node._input_sockets
-        ):
-            self.scene.addItem(edge.graphics_item)
-            return True
+    def add_edge(self, edge: Edge) -> bool:
+        """Accept an edge if it runs output -> input, else detach and reject it."""
+        if not (edge.start_socket.is_output and edge.end_socket.is_input):
+            edge.remove_from_sockets()
+            return False
 
-        edge.remove_from_sockets()
+        self._scene.addItem(edge.graphics_item)
+        return True
 
-        return False
-
-    def removeNode(self, node):
+    def remove_node(self, node: Node) -> None:
         del self._nodes[node.uuid]
 
-        for socket in list(node._input_sockets.values()) + list(
-            node._output_sockets.values()
-        ):
-            for edge in socket.edges:
-                self.removeEdge(edge)
+        # materialise the edges first: remove_edge mutates the socket lists
+        # this would otherwise be iterating
+        for edge in list(node.edges):
+            self.remove_edge(edge)
 
-        self.scene.removeItem(node.graphics_item)
+        self._scene.removeItem(node.graphics_item)
 
-    def removeEdge(self, edge):
-        # self._edges.remove(edge)
-
+    def remove_edge(self, edge: Edge) -> None:
         edge.remove_from_sockets()
+        self._scene.removeItem(edge.graphics_item)
 
-        self.scene.removeItem(edge.graphics_item)
-
-    def to_json(self):
-        scene = {
-            "width": self.scene.scene_width,
-            "height": self.scene.scene_height,
-        }
-
-        edges = list(
-            {
-                edge
-                for node in self._nodes.values()
-                for socket in list(node._output_sockets.values())
-                for edge in socket._edges
-            }
-        )
-
-        module_dict = {
-            "version": __version__,
-            "scene": scene,
-            "nodes": self._nodes,
-            "edges": edges,
-        }
-
-        return json.dumps(module_dict, cls=ModuleElementEncoder, indent=2)
-
-    def serialize(self, file):
-        self._path = file.name
-        return file.write(self.to_json())
-
-    def clear(self):
+    def clear(self) -> None:
         for node in list(self._nodes.values()):
-        # while self._nodes:
-            self.removeNode(node)
+            self.remove_node(node)
 
-    def from_json(self, text):
-        data = json.loads(text)
-        self.clear()
+    # --- serialization -----------------------------------------------------
 
-        for uuid, node_data in data["nodes"].items():
-            inputs = {
-                "a": SocketType.BIT,
-                "b": SocketType.BIT,
-            }
-            outputs = {
-                "o": SocketType.BIT,
-            }
-            text = node_data["text"] if "text" in node_data else ""
-            node = Node(
-                self, NodeContentWidget(text=text), inputs, outputs, uuid
-            )
-            node.pos = node_data["pos"]
-            self.addNode(node)
+    def to_dict(self) -> dict:
+        return module_to_dict(self)
 
-        for edge_data in data["edges"]:
-            start_node = self._nodes[edge_data["start"]["node_uuid"]]
-            end_node = self._nodes[edge_data["end"]["node_uuid"]]
-            edge = Edge(
-                start_node._output_sockets[edge_data["start"]["socket_name"]],
-                end_node._input_sockets[edge_data["end"]["socket_name"]],
-            )
-            self.addEdge(edge)
+    def load(self, data: Mapping) -> None:
+        """Replace the contents of this module with ``data``."""
+        load_into(self, data, clear=True, remap_uuids=False)
 
-    def deserialize(self, file):
-        self._path = file.name
-        text = file.read()
-        self.from_json(text)
+    def paste(self, data: Mapping) -> dict[str, str]:
+        """Add a copy of ``data`` to this module, with fresh uuids."""
+        return load_into(self, data, clear=False, remap_uuids=True)
+
+    @classmethod
+    def from_file(cls, path) -> "Module":
+        module = cls()
+        module.load(loads(Path(path).read_text()))
+        module._path = str(path)
+        # the loaded state is the baseline, not something to undo back past
+        module.history.reset()
+        return module
+
+    def save(self, path=None) -> None:
+        target = path if path is not None else self._path
+        if target is None:
+            raise ValueError("module has no path; pass one to save()")
+
+        Path(target).write_text(dumps(self.to_dict()))
+        self._path = str(target)
