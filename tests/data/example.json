@@ -1,61 +1,75 @@
 {
-  "version": "0.1.0",
+  "version": 2,
   "scene": {
     "width": 80000,
     "height": 60000
   },
-  "nodes": [
-    {
+  "nodes": {
+    "00000000000000000000000000000001": {
+      "title": "source",
       "pos": [
         -420.0,
         -200.0
       ],
-      "text": "osfjodsjf\nsdfoisdfjio\nsdfsdfi\nsdf"
+      "text": "an example node\nwith several lines\nof content",
+      "inputs": {
+        "a": "BIT",
+        "b": "BIT"
+      },
+      "outputs": {
+        "o": "BIT"
+      }
     },
-    {
+    "00000000000000000000000000000002": {
+      "title": "middle",
       "pos": [
         -60.0,
         0.0
       ],
-      "text": ""
+      "text": "",
+      "inputs": {
+        "a": "BIT",
+        "b": "BIT"
+      },
+      "outputs": {
+        "o": "BIT"
+      }
     },
-    {
+    "00000000000000000000000000000003": {
+      "title": "sink",
       "pos": [
         300.0,
         -100.0
       ],
-      "text": ""
+      "text": "",
+      "inputs": {
+        "in": "BIT",
+        "enable": "BIT"
+      },
+      "outputs": {
+        "result": "BIT"
+      }
     }
-  ],
+  },
   "edges": [
     {
       "start": {
-        "node_index": 0,
+        "node_uuid": "00000000000000000000000000000001",
         "socket_name": "o"
       },
       "end": {
-        "node_index": 2,
+        "node_uuid": "00000000000000000000000000000002",
         "socket_name": "b"
       }
     },
     {
       "start": {
-        "node_index": 1,
+        "node_uuid": "00000000000000000000000000000002",
         "socket_name": "o"
       },
       "end": {
-        "node_index": 2,
-        "socket_name": "a"
-      }
-    },
-    {
-      "start": {
-        "node_index": 0,
-        "socket_name": "o"
-      },
-      "end": {
-        "node_index": 1,
-        "socket_name": "b"
+        "node_uuid": "00000000000000000000000000000003",
+        "socket_name": "enable"
       }
     }
   ]
