@@ -1,6 +1,11 @@
+let
+  pkgs_rev = "21691b79c41ba30a80b110523c943d8d45a0912b";
+in
 {
   # nixpkgs 23.05, deterministic. Last updated: 2023-06-03.
-  pkgs ? import (fetchTarball("https://github.com/NixOS/nixpkgs/archive/f3d743463920751eb092930d06e700981398332a.tar.gz")) {}
+  pkgs ? import (fetchTarball("https://github.com/NixOS/nixpkgs/archive/${pkgs_rev}.tar.gz")) {
+    config.allowUnfree = true;
+  }
 }:
 
 with pkgs;
@@ -9,8 +14,9 @@ let
     coloredlogs
     black
     pyqt5
+    pytest
   ];
-  python-with-my-packages = python310.withPackages my-python-packages;
+  python-with-my-packages = python314.withPackages my-python-packages;
 in
 mkShell rec {
   nativeBuildInputs = with pkgs; [
@@ -19,9 +25,9 @@ mkShell rec {
   ];
   buildInputs = [
     python-with-my-packages
-    poetry
+    uv
     adwaita-qt
-    jetbrains.pycharm-community
+    jetbrains.pycharm
     umlet
   ];
   # https://discourse.nixos.org/t/python-qt-woes/11808/10
