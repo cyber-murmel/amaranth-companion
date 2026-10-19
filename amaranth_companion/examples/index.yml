@@ -1,0 +1,33 @@
+# Designs offered under File > Open Example, in this order.
+- name: logic-gates
+  label: "Logic Gates"
+  doc: >-
+    The four shipped gates on one canvas. Double-click one to see how it is
+    built: port blocks and a code block wired together.
+
+- name: nand
+  label: "NAND from AND and NOT"
+  doc: >-
+    Two hierarchical blocks composed into a third, with a variable setting the
+    width of both, and a testbench checking the truth table.
+
+- name: parameterised-bus
+  label: "Parameterised Bus"
+  doc: >-
+    One code block whose ports resize from a variable. Change `width` and
+    watch every port on the design follow.
+
+- name: blinker
+  label: "Blinker"
+  doc: >-
+    The blink example from amaranth-examples, rebuilt as blocks: a clocked
+    counter with a `period_param`, a testbench checking the blink rate, and a
+    formal spec proving the counter and output behave, ported off the `Past`
+    that amaranth has since removed.
+
+- name: glasgow-blink
+  label: "Blinker on a Glasgow"
+  doc: >-
+    The same blinker, targeting real hardware: a board is chosen, and an I/O
+    block binds the output to LED0 on a Glasgow Interface Explorer. Needs the
+    `glasgow` package to build, and yosys, nextpnr and icestorm to synthesise.

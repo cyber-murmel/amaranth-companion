@@ -7,7 +7,12 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
     "PyQt5>=5.15",
+    "amaranth>=0.5.10",
+    # the boards a design can be built for; the Glasgow platform lives in
+    # the `glasgow` package instead, which is optional -- see the README
+    "amaranth-boards>=0.0.21",
     "coloredlogs>=15",
+    "PyYAML>=6",
 ]
 
 [project.scripts]
@@ -19,6 +24,7 @@ Homepage = "https://github.com/cyber-murmel/amaranth-companion"
 [dependency-groups]
 dev = [
     "pytest>=8",
+    "pytest-cov>=5",
     "black>=23",
 ]
 
@@ -40,3 +46,35 @@ line-length = 88
 testpaths = ["tests"]
 # QT_QPA_PLATFORM is set in tests/conftest.py, which must run before PyQt
 # is imported; doing it here would need the pytest-env plugin.
+
+[tool.coverage.run]
+source = ["amaranth_companion"]
+branch = true
+# the introspection, simulation, formal and waveform workers all run in
+# subprocesses; without this their lines look untested when they are the
+# most carefully tested part of the codebase
+parallel = true
+concurrency = ["multiprocessing", "thread"]
+omit = [
+    # generated from resources/*.svg by pyrcc5, not written by hand
+    "amaranth_companion/qrc_resources.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# a floor, not a target. Deliberately below the number a full run reaches, so
+# that a machine without sby, yosys or gtkwave -- where those tests skip --
+# does not fail the build for it.
+fail_under = 80
+exclude_also = [
+    # typing-only imports never run
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.$",
+    # the `python -m ...` guard itself; the function it calls is measured,
+    # because the workers really are run as subprocesses
+    'if "__main__" == __name__:',
+    # abstract contracts
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]

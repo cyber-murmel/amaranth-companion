@@ -4,7 +4,7 @@ import os
 import pytest
 
 from amaranth_companion.module import Module
-from amaranth_companion.module.element import Edge, SocketType
+from amaranth_companion.module.element import Edge
 from amaranth_companion.module.serialization import (
     FORMAT_VERSION,
     LEGACY_INPUTS,
@@ -15,7 +15,7 @@ from amaranth_companion.module.serialization import (
     selection_to_dict,
 )
 
-from conftest import DATA_DIR
+from conftest import DATA_DIR, ports
 
 
 def test_round_trip_preserves_everything(chain):
@@ -35,8 +35,7 @@ def test_round_trip_preserves_custom_socket_layout(module, make_node):
     make_node(
         module,
         title="custom",
-        inputs={"enable": SocketType.BIT, "data": SocketType.BIT},
-        outputs={"result": SocketType.BIT},
+        node_ports=ports("enable_in", "data_in", "result_out"),
     )
 
     data = module.to_dict()
@@ -44,8 +43,8 @@ def test_round_trip_preserves_custom_socket_layout(module, make_node):
     restored.load(data)
 
     node = next(iter(restored.nodes.values()))
-    assert list(node.input_sockets) == ["enable", "data"]
-    assert list(node.output_sockets) == ["result"]
+    assert list(node.input_sockets) == ["enable_in", "data_in"]
+    assert list(node.output_sockets) == ["result_out"]
     assert restored.to_dict() == data
 
 
@@ -75,8 +74,9 @@ def test_format_1_payload_falls_back_to_the_hardcoded_sockets(module):
     module.load(legacy)
 
     node = module.nodes["deadbeef"]
-    assert list(node.input_sockets) == list(LEGACY_INPUTS)
-    assert list(node.output_sockets) == list(LEGACY_OUTPUTS)
+    # the migration gives the suffix-less legacy names the one their side implies
+    assert list(node.input_sockets) == [f"{name}_in" for name in LEGACY_INPUTS]
+    assert list(node.output_sockets) == [f"{name}_out" for name in LEGACY_OUTPUTS]
     assert node.text == "kept"
     assert node.pos == (20.0, 40.0)
 
@@ -203,10 +203,72 @@ def test_example_fixture_loads(qapp):
     titles = sorted(node.title for node in module.nodes.values())
     assert titles == ["middle", "sink", "source"]
     sink = next(n for n in module.nodes.values() if n.title == "sink")
-    assert list(sink.input_sockets) == ["in", "enable"]
+    assert list(sink.input_sockets) == ["data_in", "enable_in"]
 
 
 def test_example_fixture_is_in_the_current_format(qapp):
     path = os.path.join(DATA_DIR, "example.json")
 
     assert json.loads(open(path).read())["version"] == FORMAT_VERSION
+
+
+# --- format 4: explicit port kinds ------------------------------------------
+
+
+def legacy_port(text, role):
+    return {
+        "title": f"{role}_x",
+        "pos": [0.0, 0.0],
+        "text": text,
+        "kind": "port",
+        "block_id": "builtin.port",
+        "ports": [{"name": text, "role": role, "shape": {"width": 1, "signed": False}}],
+    }
+
+
+@pytest.mark.parametrize(
+    "text, role, kind",
+    [
+        ("a_in", "in", "port_in"),
+        ("result_out", "out", "port_out"),
+        ("width_param", "param", "port_param"),
+    ],
+)
+def test_a_format_3_port_takes_its_kind_from_the_old_suffix(module, text, role, kind):
+    """The suffix used to *be* the role; reading it back is a one-off."""
+    module.load({"version": 3, "nodes": {"p": legacy_port(text, role)}, "edges": []})
+
+    node = module.nodes["p"]
+    assert node.kind.value == kind
+    assert node.text == text.rsplit("_", 1)[0]
+
+
+def test_a_format_3_port_keeps_its_wiring(module):
+    """Migration must not cost the user an edge."""
+    module.load(
+        {
+            "version": 3,
+            "nodes": {
+                "a": legacy_port("a_in", "in"),
+                "b": legacy_port("b_out", "out"),
+            },
+            "edges": [
+                {
+                    "start": {"node_uuid": "a", "socket_name": "a_in"},
+                    "end": {"node_uuid": "b", "socket_name": "b_out"},
+                }
+            ],
+        }
+    )
+
+    assert len(list(module.edges)) == 1
+
+
+def test_a_migrated_port_saves_in_the_new_format(module):
+    module.load({"version": 3, "nodes": {"p": legacy_port("a_in", "in")}, "edges": []})
+
+    saved = module.to_dict()
+
+    assert saved["version"] == FORMAT_VERSION
+    assert saved["nodes"]["p"]["block_id"] == "builtin.port_in"
+    assert saved["nodes"]["p"]["text"] == "a"

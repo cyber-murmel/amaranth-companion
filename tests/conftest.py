@@ -10,15 +10,45 @@ import pytest  # noqa: E402
 from PyQt5.QtWidgets import QApplication  # noqa: E402
 
 from amaranth_companion.module import Module  # noqa: E402
-from amaranth_companion.module.element import Edge, Node, SocketType  # noqa: E402
+from amaranth_companion.blocks import PortSpec  # noqa: E402
+from amaranth_companion.module.element import Edge, Node  # noqa: E402
 from amaranth_companion.module.element.graphics_item import (  # noqa: E402
     NodeContentWidget,
 )
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-DEFAULT_INPUTS = {"a": SocketType.BIT, "b": SocketType.BIT}
-DEFAULT_OUTPUTS = {"o": SocketType.BIT}
+
+def pytest_configure(config):
+    """Measure the worker subprocesses as well as this process.
+
+    Introspection, simulation, formal checking and waveform runs all happen in
+    a ``python -m`` subprocess, which is most of the point of them. Coverage
+    only follows a child process when ``COVERAGE_PROCESS_START`` names a
+    config file, and children inherit the environment, so setting it here is
+    enough -- without it the most carefully tested code in the project reads
+    as untested.
+    """
+    try:
+        import coverage
+    except ImportError:
+        return
+
+    if coverage.Coverage.current() is None:
+        return  # not a coverage run
+
+    os.environ.setdefault(
+        "COVERAGE_PROCESS_START", os.path.join(PROJECT_ROOT, "pyproject.toml")
+    )
+
+
+def ports(*names: str) -> list[PortSpec]:
+    """Port specs from suffixed names: ``ports("a_in", "o_out")``."""
+    return [PortSpec.from_name(name) for name in names]
+
+
+DEFAULT_PORTS = ports("a_in", "b_in", "o_out")
 
 
 #: keeps the QApplication alive for the whole process. Qt objects destroyed
@@ -51,12 +81,11 @@ def collect_qt_garbage(qapp):
 def make_node(qapp):
     """Build a node and add it to a module."""
 
-    def _make(module, title="", inputs=None, outputs=None, pos=(0, 0), text=""):
+    def _make(module, title="", node_ports=None, pos=(0, 0), text=""):
         node = Node(
             module,
-            NodeContentWidget(text=text),
-            DEFAULT_INPUTS if inputs is None else inputs,
-            DEFAULT_OUTPUTS if outputs is None else outputs,
+            ports=DEFAULT_PORTS if node_ports is None else node_ports,
+            content_widget=NodeContentWidget(text=text),
             title=title,
         )
         module.add_node(node)
@@ -78,7 +107,11 @@ def chain(module, make_node):
         make_node(module, title=f"n{index}", pos=(index * 300, index * 100))
         for index in range(3)
     ]
-    module.add_edge(Edge(nodes[0].output_sockets["o"], nodes[1].input_sockets["a"]))
-    module.add_edge(Edge(nodes[1].output_sockets["o"], nodes[2].input_sockets["a"]))
+    module.add_edge(
+        Edge(nodes[0].output_sockets["o_out"], nodes[1].input_sockets["a_in"])
+    )
+    module.add_edge(
+        Edge(nodes[1].output_sockets["o_out"], nodes[2].input_sockets["a_in"])
+    )
     module.history.reset()
     return module, nodes

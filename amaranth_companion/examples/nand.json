@@ -1,0 +1,524 @@
+{
+  "version": 4,
+  "scene": {
+    "width": 80000,
+    "height": 60000
+  },
+  "nodes": {
+    "n0001": {
+      "title": "Variable",
+      "pos": [
+        -880.0,
+        300.0
+      ],
+      "text": "width = 4",
+      "kind": "variable",
+      "ports": [
+        {
+          "name": "width_param",
+          "role": "param"
+        }
+      ],
+      "block_id": "builtin.variable"
+    },
+    "n0002": {
+      "title": "a",
+      "pos": [
+        -880.0,
+        -240.0
+      ],
+      "text": "a",
+      "kind": "port_in",
+      "ports": [
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_in"
+    },
+    "n0003": {
+      "title": "b",
+      "pos": [
+        -880.0,
+        -60.0
+      ],
+      "text": "b",
+      "kind": "port_in",
+      "ports": [
+        {
+          "name": "b_in",
+          "role": "in",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_in"
+    },
+    "n0004": {
+      "title": "AND",
+      "pos": [
+        -380.0,
+        -200.0
+      ],
+      "text": "",
+      "kind": "hierarchical",
+      "ports": [
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        },
+        {
+          "name": "b_in",
+          "role": "in",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        },
+        {
+          "name": "width_param",
+          "role": "param"
+        },
+        {
+          "name": "o_out",
+          "role": "out",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "logic.and2",
+      "child": {
+        "nodes": {
+          "n0008": {
+            "title": "a",
+            "pos": [
+              -460.0,
+              -160.0
+            ],
+            "text": "a",
+            "kind": "port_in",
+            "ports": [
+              {
+                "name": "a_in",
+                "role": "in",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.port_in"
+          },
+          "n0009": {
+            "title": "b",
+            "pos": [
+              -460.0,
+              40.0
+            ],
+            "text": "b",
+            "kind": "port_in",
+            "ports": [
+              {
+                "name": "b_in",
+                "role": "in",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.port_in"
+          },
+          "n0010": {
+            "title": "width",
+            "pos": [
+              -460.0,
+              240.0
+            ],
+            "text": "width",
+            "kind": "port_param",
+            "ports": [
+              {
+                "name": "width_param",
+                "role": "param"
+              }
+            ],
+            "block_id": "builtin.port_param"
+          },
+          "n0011": {
+            "title": "And2",
+            "pos": [
+              -100.0,
+              -180.0
+            ],
+            "text": "from amaranth import *\n\n\nclass And2(Elaboratable):\n    def __init__(self, width_param=1):\n        self.a_in = Signal(width_param)\n        self.b_in = Signal(width_param)\n        self.o_out = Signal(width_param)\n\n    def elaborate(self, platform):\n        m = Module()\n        m.d.comb += self.o_out.eq(self.a_in & self.b_in)\n        return m\n",
+            "kind": "code",
+            "ports": [
+              {
+                "name": "width_param",
+                "role": "param",
+                "default": 1
+              },
+              {
+                "name": "a_in",
+                "role": "in",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              },
+              {
+                "name": "b_in",
+                "role": "in",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              },
+              {
+                "name": "o_out",
+                "role": "out",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.code",
+            "params": {
+              "width_param": 1
+            }
+          },
+          "n0012": {
+            "title": "o",
+            "pos": [
+              320.0,
+              -60.0
+            ],
+            "text": "o",
+            "kind": "port_out",
+            "ports": [
+              {
+                "name": "o_out",
+                "role": "out",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.port_out"
+          }
+        },
+        "edges": [
+          {
+            "start": {
+              "node_uuid": "n0008",
+              "socket_name": "a_in"
+            },
+            "end": {
+              "node_uuid": "n0011",
+              "socket_name": "a_in"
+            }
+          },
+          {
+            "start": {
+              "node_uuid": "n0009",
+              "socket_name": "b_in"
+            },
+            "end": {
+              "node_uuid": "n0011",
+              "socket_name": "b_in"
+            }
+          },
+          {
+            "start": {
+              "node_uuid": "n0010",
+              "socket_name": "width_param"
+            },
+            "end": {
+              "node_uuid": "n0011",
+              "socket_name": "width_param"
+            }
+          },
+          {
+            "start": {
+              "node_uuid": "n0011",
+              "socket_name": "o_out"
+            },
+            "end": {
+              "node_uuid": "n0012",
+              "socket_name": "o_out"
+            }
+          }
+        ]
+      }
+    },
+    "n0005": {
+      "title": "NOT",
+      "pos": [
+        80.0,
+        -160.0
+      ],
+      "text": "",
+      "kind": "hierarchical",
+      "ports": [
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        },
+        {
+          "name": "width_param",
+          "role": "param"
+        },
+        {
+          "name": "o_out",
+          "role": "out",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "logic.not",
+      "child": {
+        "nodes": {
+          "n0013": {
+            "title": "a",
+            "pos": [
+              -460.0,
+              -60.0
+            ],
+            "text": "a",
+            "kind": "port_in",
+            "ports": [
+              {
+                "name": "a_in",
+                "role": "in",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.port_in"
+          },
+          "n0014": {
+            "title": "width",
+            "pos": [
+              -460.0,
+              240.0
+            ],
+            "text": "width",
+            "kind": "port_param",
+            "ports": [
+              {
+                "name": "width_param",
+                "role": "param"
+              }
+            ],
+            "block_id": "builtin.port_param"
+          },
+          "n0015": {
+            "title": "Not",
+            "pos": [
+              -100.0,
+              -180.0
+            ],
+            "text": "from amaranth import *\n\n\nclass Not(Elaboratable):\n    def __init__(self, width_param=1):\n        self.a_in = Signal(width_param)\n        self.o_out = Signal(width_param)\n\n    def elaborate(self, platform):\n        m = Module()\n        m.d.comb += self.o_out.eq(~self.a_in)\n        return m\n",
+            "kind": "code",
+            "ports": [
+              {
+                "name": "width_param",
+                "role": "param",
+                "default": 1
+              },
+              {
+                "name": "a_in",
+                "role": "in",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              },
+              {
+                "name": "o_out",
+                "role": "out",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.code",
+            "params": {
+              "width_param": 1
+            }
+          },
+          "n0016": {
+            "title": "o",
+            "pos": [
+              320.0,
+              -60.0
+            ],
+            "text": "o",
+            "kind": "port_out",
+            "ports": [
+              {
+                "name": "o_out",
+                "role": "out",
+                "shape": {
+                  "width": 4,
+                  "signed": false
+                }
+              }
+            ],
+            "block_id": "builtin.port_out"
+          }
+        },
+        "edges": [
+          {
+            "start": {
+              "node_uuid": "n0013",
+              "socket_name": "a_in"
+            },
+            "end": {
+              "node_uuid": "n0015",
+              "socket_name": "a_in"
+            }
+          },
+          {
+            "start": {
+              "node_uuid": "n0014",
+              "socket_name": "width_param"
+            },
+            "end": {
+              "node_uuid": "n0015",
+              "socket_name": "width_param"
+            }
+          },
+          {
+            "start": {
+              "node_uuid": "n0015",
+              "socket_name": "o_out"
+            },
+            "end": {
+              "node_uuid": "n0016",
+              "socket_name": "o_out"
+            }
+          }
+        ]
+      }
+    },
+    "n0006": {
+      "title": "q",
+      "pos": [
+        520.0,
+        -120.0
+      ],
+      "text": "q",
+      "kind": "port_out",
+      "ports": [
+        {
+          "name": "q_out",
+          "role": "out",
+          "shape": {
+            "width": 4,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_out"
+    },
+    "n0007": {
+      "title": "NAND truth table",
+      "pos": [
+        -380.0,
+        320.0
+      ],
+      "text": "async def testbench(ctx, dut):\n    for a, b in ((0b1100, 0b1010), (0b1111, 0b1111), (0, 0)):\n        ctx.set(dut.a_in, a)\n        ctx.set(dut.b_in, b)\n        await ctx.delay(1e-6)\n        assert ctx.get(dut.q_out) == ~(a & b) & 0b1111\n",
+      "kind": "testbench",
+      "ports": [],
+      "block_id": "builtin.testbench"
+    }
+  },
+  "edges": [
+    {
+      "start": {
+        "node_uuid": "n0001",
+        "socket_name": "width_param"
+      },
+      "end": {
+        "node_uuid": "n0004",
+        "socket_name": "width_param"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0001",
+        "socket_name": "width_param"
+      },
+      "end": {
+        "node_uuid": "n0005",
+        "socket_name": "width_param"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0002",
+        "socket_name": "a_in"
+      },
+      "end": {
+        "node_uuid": "n0004",
+        "socket_name": "a_in"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0003",
+        "socket_name": "b_in"
+      },
+      "end": {
+        "node_uuid": "n0004",
+        "socket_name": "b_in"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0004",
+        "socket_name": "o_out"
+      },
+      "end": {
+        "node_uuid": "n0005",
+        "socket_name": "a_in"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0005",
+        "socket_name": "o_out"
+      },
+      "end": {
+        "node_uuid": "n0006",
+        "socket_name": "q_out"
+      }
+    }
+  ]
+}

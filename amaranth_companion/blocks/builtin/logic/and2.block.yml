@@ -1,0 +1,9 @@
+id: logic.and2
+label: AND
+kind: hierarchical
+category: [Logic]
+icon: icons/and2.svg
+doc: Bitwise and of two operands.
+params:
+  width_param: {default: 1, dtype: int}
+implementation: and2.json

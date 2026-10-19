@@ -1,3 +1,4 @@
+from logging import getLogger
 from pathlib import Path
 from types import MappingProxyType
 from typing import Iterator, Mapping
@@ -7,6 +8,8 @@ from .history import ModuleHistory
 from .scene.module_scene import ModuleScene
 from .serialization import dumps, load_into, loads, module_to_dict
 
+log = getLogger(__name__)
+
 
 class Module:
     """A gateware module: the node graph plus the scene it is drawn on."""
@@ -15,6 +18,8 @@ class Module:
         self._path: str | None = None
         self._nodes: dict[str, Node] = {}
         self._scene = ModuleScene()
+        self._design = None
+        self._owner = None
         self._history = ModuleHistory(self)
         self._history.reset()
 
@@ -25,7 +30,48 @@ class Module:
         return self._scene
 
     @property
+    def owner(self):
+        """The hierarchical node this module is the inside of, if any."""
+        return self._owner
+
+    @owner.setter
+    def owner(self, value) -> None:
+        self._owner = value
+
+    def inherited_param(self, name: str):
+        """The value the enclosing block was given for parameter ``name``.
+
+        This is how a parameter crosses into a block's implementation: a
+        parameter port block inside asks the node it belongs to what it was
+        handed from the level above.
+        """
+        if self._owner is None:
+            return None
+
+        from .parameters import resolve_params
+
+        values, _error = resolve_params(self._owner)
+        return values.get(name)
+
+    @property
+    def design(self):
+        """The document this module belongs to, if it belongs to one."""
+        return self._design
+
+    @design.setter
+    def design(self, value) -> None:
+        self._design = value
+
+    @property
     def history(self) -> ModuleHistory:
+        """The undo stack edits to this module go on.
+
+        A module inside a design shares the design's stack: descending into a
+        block and editing it is one editing session to the user, so Ctrl+Z
+        must not mean something different depending on the depth on screen.
+        """
+        if self._design is not None:
+            return self._design.history
         return self._history
 
     @property
@@ -56,8 +102,17 @@ class Module:
         self._scene.addItem(node.graphics_item)
 
     def add_edge(self, edge: Edge) -> bool:
-        """Accept an edge if it runs output -> input, else detach and reject it."""
-        if not (edge.start_socket.is_output and edge.end_socket.is_input):
+        """Accept an edge if it is meaningful, else detach and reject it.
+
+        An edge must run output -> input, and must join two sockets of the same
+        :class:`~.element.SocketKind`: a wire and an elaboration-time parameter
+        are not interchangeable. Width mismatches are allowed through, because
+        Amaranth itself truncates or extends.
+        """
+        start, end = edge.start_socket, edge.end_socket
+
+        if not (start.is_output and end.is_input) or not start.can_connect_to(end):
+            log.debug("rejecting edge %s -> %s", start, end)
             edge.remove_from_sockets()
             return False
 
@@ -84,8 +139,13 @@ class Module:
 
     # --- serialization -----------------------------------------------------
 
-    def to_dict(self) -> dict:
-        return module_to_dict(self)
+    def to_dict(self, *, versioned: bool = True) -> dict:
+        """This module as plain data.
+
+        ``versioned=False`` drops the format version and scene size, which is
+        what a caller comparing two modules structurally wants.
+        """
+        return module_to_dict(self, versioned=versioned)
 
     def load(self, data: Mapping) -> None:
         """Replace the contents of this module with ``data``."""

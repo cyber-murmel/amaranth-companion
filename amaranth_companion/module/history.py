@@ -1,20 +1,26 @@
-from typing import TYPE_CHECKING
-
-from .serialization import module_to_dict
-
-if TYPE_CHECKING:
-    from .module import Module
+from typing import Protocol
 
 
-class ModuleHistory:
-    """Undo/redo stack of whole-module snapshots.
+class Snapshotable(Protocol):
+    """Anything that can be captured whole and put back."""
 
-    Owned by the :class:`Module`, not by a view, so that the history survives
-    the module being shown in a different view (or in none at all).
+    def to_dict(self) -> dict: ...
+
+    def load(self, data) -> None: ...
+
+
+class History:
+    """Undo/redo stack of whole-document snapshots.
+
+    Owned by the subject itself -- a :class:`~.module.Module`, or the
+    :class:`~amaranth_companion.design.Design` that contains it -- rather than
+    by a view, so the history survives being shown in a different view, or in
+    none at all. A design's snapshot nests the whole hierarchy, so one stack
+    covers edits made at any depth.
     """
 
-    def __init__(self, module: "Module"):
-        self._module = module
+    def __init__(self, subject: Snapshotable):
+        self._subject = subject
         self._past: list[dict] = []
         self._future: list[dict] = []
         self._restoring = False
@@ -30,7 +36,7 @@ class ModuleHistory:
         if self._restoring:
             return
 
-        snapshot = module_to_dict(self._module)
+        snapshot = self._subject.to_dict()
         if self._past and self._past[-1] == snapshot:
             return
 
@@ -61,6 +67,10 @@ class ModuleHistory:
         # rebuilding the module must not record a snapshot of itself
         self._restoring = True
         try:
-            self._module.load(snapshot)
+            self._subject.load(snapshot)
         finally:
             self._restoring = False
+
+
+#: the name this class had when only modules were snapshotted
+ModuleHistory = History

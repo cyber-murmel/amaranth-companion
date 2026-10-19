@@ -1,0 +1,114 @@
+{
+  "version": 4,
+  "scene": {
+    "width": 80000,
+    "height": 60000
+  },
+  "nodes": {
+    "n0001": {
+      "title": "Variable",
+      "pos": [
+        -820.0,
+        220.0
+      ],
+      "text": "period = 10",
+      "kind": "variable",
+      "ports": [
+        {
+          "name": "period_param",
+          "role": "param"
+        }
+      ],
+      "block_id": "builtin.variable"
+    },
+    "n0002": {
+      "title": "Blinker",
+      "pos": [
+        -340.0,
+        -300.0
+      ],
+      "text": "from amaranth import *\n\n\nclass Blinker(Elaboratable):\n    \"\"\"Toggle `blink_out` every half period.\n\n    The blink example from the amaranth-examples repository, written to the\n    editor's naming convention: `blink_out` is a port because of its suffix,\n    `counter` is internal because it has none, and the constructor argument\n    is `period_param` rather than `period`.\n    \"\"\"\n\n    def __init__(self, period_param=10):\n        self.half_period = max(int(period_param) // 2, 1)\n        self.blink_out = Signal(1)\n        self.counter = Signal(range(self.half_period + 1))\n\n    def elaborate(self, platform):\n        m = Module()\n        with m.If(self.counter == 0):\n            m.d.sync += [\n                # one extra cycle is needed to reload the counter\n                self.counter.eq(self.half_period - 1),\n                self.blink_out.eq(~self.blink_out),\n            ]\n        with m.Else():\n            m.d.sync += self.counter.eq(self.counter - 1)\n        return m\n",
+      "kind": "code",
+      "ports": [
+        {
+          "name": "period_param",
+          "role": "param",
+          "default": 10
+        },
+        {
+          "name": "blink_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.code"
+    },
+    "n0003": {
+      "title": "blink",
+      "pos": [
+        300.0,
+        -180.0
+      ],
+      "text": "blink",
+      "kind": "port_out",
+      "ports": [
+        {
+          "name": "blink_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_out"
+    },
+    "n0004": {
+      "title": "Blink rate",
+      "pos": [
+        -340.0,
+        300.0
+      ],
+      "text": "async def testbench(ctx, dut):\n    \"\"\"The output must toggle every half period and hold in between.\"\"\"\n    half = 5  # period = 10\n\n    await ctx.tick()\n    before = ctx.get(dut.blink_out)\n\n    # it holds for the rest of the half period\n    for _ in range(half - 1):\n        await ctx.tick()\n    assert ctx.get(dut.blink_out) == before\n\n    # and flips on the next one\n    await ctx.tick()\n    assert ctx.get(dut.blink_out) != before\n",
+      "kind": "testbench",
+      "ports": [],
+      "block_id": "builtin.testbench"
+    },
+    "n0005": {
+      "title": "Blink properties",
+      "pos": [
+        320.0,
+        300.0
+      ],
+      "text": "from amaranth import Cat, Signal\nfrom amaranth.hdl import Assert, Cover\n\nMODES = (\"bmc\", \"cover\", \"prove\")\nDEPTH = 30\n\n\ndef formal(m, dut):\n    \"\"\"The blink example's properties, without `Past`.\n\n    Amaranth removed `Past`/`Rose`/`Fell`/`Stable`, so the history the\n    original spec relied on is kept explicitly: a delay register is exactly\n    what `Past(x)` used to compile down to.\n    \"\"\"\n    blinker = dut.blinker\n    blink, counter = blinker.blink_out, blinker.counter\n    half = blinker.half_period\n\n    previous_blink = Signal.like(blink)\n    previous_counter = Signal.like(counter)\n    m.d.sync += [previous_blink.eq(blink), previous_counter.eq(counter)]\n\n    # nothing is claimed about the very first cycle, when the history\n    # registers still hold their reset values rather than real history\n    started = Signal()\n    m.d.sync += started.eq(1)\n\n    # the counter never leaves its range, and both output levels happen\n    m.d.comb += [\n        Assert(counter < half),\n        Cover(blink == 1),\n        Cover(blink == 0),\n    ]\n\n    with m.If(started):\n        with m.If(previous_counter == 0):\n            # the counter reloads and the output flips together\n            m.d.comb += [\n                Assert(counter == half - 1),\n                Assert(blink != previous_blink),\n            ]\n        with m.Else():\n            # otherwise it counts down and the output holds\n            m.d.comb += [\n                Assert(counter == previous_counter - 1),\n                Assert(blink == previous_blink),\n            ]\n",
+      "kind": "formal",
+      "ports": [],
+      "block_id": "builtin.formal"
+    }
+  },
+  "edges": [
+    {
+      "start": {
+        "node_uuid": "n0001",
+        "socket_name": "period_param"
+      },
+      "end": {
+        "node_uuid": "n0002",
+        "socket_name": "period_param"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0002",
+        "socket_name": "blink_out"
+      },
+      "end": {
+        "node_uuid": "n0003",
+        "socket_name": "blink_out"
+      }
+    }
+  ]
+}

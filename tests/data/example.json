@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 4,
   "scene": {
     "width": 80000,
     "height": 60000
@@ -12,13 +12,33 @@
         -200.0
       ],
       "text": "an example node\nwith several lines\nof content",
-      "inputs": {
-        "a": "BIT",
-        "b": "BIT"
-      },
-      "outputs": {
-        "o": "BIT"
-      }
+      "kind": "code",
+      "ports": [
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "b_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "o_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ]
     },
     "00000000000000000000000000000002": {
       "title": "middle",
@@ -27,13 +47,33 @@
         0.0
       ],
       "text": "",
-      "inputs": {
-        "a": "BIT",
-        "b": "BIT"
-      },
-      "outputs": {
-        "o": "BIT"
-      }
+      "kind": "code",
+      "ports": [
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "b_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "o_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ]
     },
     "00000000000000000000000000000003": {
       "title": "sink",
@@ -42,34 +82,54 @@
         -100.0
       ],
       "text": "",
-      "inputs": {
-        "in": "BIT",
-        "enable": "BIT"
-      },
-      "outputs": {
-        "result": "BIT"
-      }
+      "kind": "code",
+      "ports": [
+        {
+          "name": "data_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "enable_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "result_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ]
     }
   },
   "edges": [
     {
       "start": {
         "node_uuid": "00000000000000000000000000000001",
-        "socket_name": "o"
+        "socket_name": "o_out"
       },
       "end": {
         "node_uuid": "00000000000000000000000000000002",
-        "socket_name": "b"
+        "socket_name": "b_in"
       }
     },
     {
       "start": {
         "node_uuid": "00000000000000000000000000000002",
-        "socket_name": "o"
+        "socket_name": "o_out"
       },
       "end": {
         "node_uuid": "00000000000000000000000000000003",
-        "socket_name": "enable"
+        "socket_name": "enable_in"
       }
     }
   ]

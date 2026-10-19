@@ -1,0 +1,9 @@
+id: logic.not
+label: NOT
+kind: hierarchical
+category: [Logic]
+icon: icons/not.svg
+doc: Bitwise inversion.
+params:
+  width_param: {default: 1, dtype: int}
+implementation: not.json

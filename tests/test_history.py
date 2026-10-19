@@ -107,7 +107,7 @@ def test_history_tracks_added_edges(chain, make_node):
     extra = make_node(module, title="extra")
     module.history.check_in()
 
-    module.add_edge(Edge(extra.output_sockets["o"], nodes[0].input_sockets["b"]))
+    module.add_edge(Edge(extra.output_sockets["o_out"], nodes[0].input_sockets["b_in"]))
     module.history.check_in()
     assert len(list(module.edges)) == 3
 

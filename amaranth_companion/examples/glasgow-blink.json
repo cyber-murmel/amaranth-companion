@@ -1,0 +1,104 @@
+{
+  "version": 4,
+  "scene": {
+    "width": 80000,
+    "height": 60000
+  },
+  "nodes": {
+    "n0001": {
+      "title": "Variable",
+      "pos": [
+        -860.0,
+        240.0
+      ],
+      "text": "period = 48000000",
+      "kind": "variable",
+      "ports": [
+        {
+          "name": "period_param",
+          "role": "param"
+        }
+      ],
+      "block_id": "builtin.variable"
+    },
+    "n0002": {
+      "title": "Blinker",
+      "pos": [
+        -380.0,
+        -300.0
+      ],
+      "text": "from amaranth import *\n\n\nclass Blinker(Elaboratable):\n    \"\"\"Toggle `blink_out` every half period.\n\n    `period_param` counts input clock cycles, not milliseconds. The Glasgow\n    runs its fabric from a 48 MHz clock, so the variable beside this block\n    is set to 48000000 for a one second blink.\n    \"\"\"\n\n    def __init__(self, period_param=48_000_000):\n        self.half_period = max(int(period_param) // 2, 1)\n        self.blink_out = Signal(1)\n        self.counter = Signal(range(self.half_period + 1))\n\n    def elaborate(self, platform):\n        m = Module()\n        with m.If(self.counter == 0):\n            m.d.sync += [\n                self.counter.eq(self.half_period - 1),\n                self.blink_out.eq(~self.blink_out),\n            ]\n        with m.Else():\n            m.d.sync += self.counter.eq(self.counter - 1)\n        return m\n",
+      "kind": "code",
+      "ports": [
+        {
+          "name": "period_param",
+          "role": "param",
+          "default": 48000000
+        },
+        {
+          "name": "blink_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.code"
+    },
+    "n0003": {
+      "title": "Glasgow LED0",
+      "pos": [
+        260.0,
+        -180.0
+      ],
+      "text": "LED0",
+      "kind": "resource",
+      "ports": [
+        {
+          "name": "led0_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.resource"
+    },
+    "n0004": {
+      "title": "Blink rate",
+      "pos": [
+        -380.0,
+        300.0
+      ],
+      "text": "async def testbench(ctx, dut):\n    \"\"\"The output goes straight to a pin, so reach into the blinker for it.\n\n    There is no port block at the top of this design -- nothing needs one\n    when the signal's destination is an LED -- so `Top` has no `blink_out`\n    of its own. The submodule is an attribute, which is what makes its\n    internals reachable from a testbench and from a formal spec.\n    \"\"\"\n    blink = dut.blinker.blink_out\n\n    await ctx.tick()\n    before = ctx.get(blink)\n\n    # a full period here is 48 million cycles, so check only that it holds\n    for _ in range(3):\n        await ctx.tick()\n    assert ctx.get(blink) == before, \"flipped far too early\"\n",
+      "kind": "testbench",
+      "ports": [],
+      "block_id": "builtin.testbench"
+    }
+  },
+  "edges": [
+    {
+      "start": {
+        "node_uuid": "n0001",
+        "socket_name": "period_param"
+      },
+      "end": {
+        "node_uuid": "n0002",
+        "socket_name": "period_param"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0002",
+        "socket_name": "blink_out"
+      },
+      "end": {
+        "node_uuid": "n0003",
+        "socket_name": "led0_in"
+      }
+    }
+  ],
+  "platform": "glasgow.hardware.platform.rev_c:GlasgowRevC123Platform"
+}

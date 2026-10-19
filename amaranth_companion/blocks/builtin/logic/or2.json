@@ -1,0 +1,168 @@
+{
+  "version": 4,
+  "scene": {
+    "width": 80000,
+    "height": 60000
+  },
+  "nodes": {
+    "n0001": {
+      "title": "a",
+      "pos": [
+        -460.0,
+        -160.0
+      ],
+      "text": "a",
+      "kind": "port_in",
+      "ports": [
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_in"
+    },
+    "n0002": {
+      "title": "b",
+      "pos": [
+        -460.0,
+        40.0
+      ],
+      "text": "b",
+      "kind": "port_in",
+      "ports": [
+        {
+          "name": "b_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_in"
+    },
+    "n0003": {
+      "title": "width",
+      "pos": [
+        -460.0,
+        240.0
+      ],
+      "text": "width",
+      "kind": "port_param",
+      "ports": [
+        {
+          "name": "width_param",
+          "role": "param"
+        }
+      ],
+      "block_id": "builtin.port_param"
+    },
+    "n0004": {
+      "title": "Or2",
+      "pos": [
+        -100.0,
+        -180.0
+      ],
+      "text": "from amaranth import *\n\n\nclass Or2(Elaboratable):\n    def __init__(self, width_param=1):\n        self.a_in = Signal(width_param)\n        self.b_in = Signal(width_param)\n        self.o_out = Signal(width_param)\n\n    def elaborate(self, platform):\n        m = Module()\n        m.d.comb += self.o_out.eq(self.a_in | self.b_in)\n        return m\n",
+      "kind": "code",
+      "ports": [
+        {
+          "name": "width_param",
+          "role": "param",
+          "default": 1
+        },
+        {
+          "name": "a_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "b_in",
+          "role": "in",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        },
+        {
+          "name": "o_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.code"
+    },
+    "n0005": {
+      "title": "o",
+      "pos": [
+        320.0,
+        -60.0
+      ],
+      "text": "o",
+      "kind": "port_out",
+      "ports": [
+        {
+          "name": "o_out",
+          "role": "out",
+          "shape": {
+            "width": 1,
+            "signed": false
+          }
+        }
+      ],
+      "block_id": "builtin.port_out"
+    }
+  },
+  "edges": [
+    {
+      "start": {
+        "node_uuid": "n0001",
+        "socket_name": "a_in"
+      },
+      "end": {
+        "node_uuid": "n0004",
+        "socket_name": "a_in"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0002",
+        "socket_name": "b_in"
+      },
+      "end": {
+        "node_uuid": "n0004",
+        "socket_name": "b_in"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0003",
+        "socket_name": "width_param"
+      },
+      "end": {
+        "node_uuid": "n0004",
+        "socket_name": "width_param"
+      }
+    },
+    {
+      "start": {
+        "node_uuid": "n0004",
+        "socket_name": "o_out"
+      },
+      "end": {
+        "node_uuid": "n0005",
+        "socket_name": "o_out"
+      }
+    }
+  ]
+}

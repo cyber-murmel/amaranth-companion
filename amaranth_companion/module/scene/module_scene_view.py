@@ -2,19 +2,40 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import Qt, QEvent, QPointF
+from PyQt5.QtCore import Qt, QEvent, QMimeData, QPointF, pyqtSignal
+from PyQt5.QtGui import QDrag
 from PyQt5.QtGui import QMouseEvent, QPainter, QTransform
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsView
+from PyQt5.QtWidgets import (
+    QAbstractScrollArea,
+    QGraphicsItem,
+    QGraphicsProxyWidget,
+    QGraphicsTextItem,
+    QGraphicsView,
+)
 
+from ... import mime
 from ..element import Edge, Socket
 from ..element.graphics_item import (
     EdgeGraphicsItem,
     NodeGraphicsItem,
+    NodeTitleItem,
     SocketGraphicsItem,
 )
 
 if TYPE_CHECKING:
     from .. import Module, ModuleHistory
+
+
+def _can_scroll(widget) -> bool:
+    """Whether ``widget``, or something inside it, can scroll vertically."""
+    if widget is None:
+        return False
+
+    areas = widget.findChildren(QAbstractScrollArea)
+    if isinstance(widget, QAbstractScrollArea):
+        areas = [widget, *areas]
+
+    return any(area.verticalScrollBar().maximum() > 0 for area in areas)
 
 
 class DragMode(Enum):
@@ -40,6 +61,12 @@ class DragState:
 
 
 class ModuleSceneView(QGraphicsView):
+    #: a node with an inside was double-clicked; carries the Node
+    node_activated = pyqtSignal(object)
+
+    #: a block was dropped on the canvas; carries (block id, scene position)
+    block_dropped = pyqtSignal(str, object)
+
     ZOOM_STEP = 1
     ZOOM_MIN, ZOOM_MAX = -10, 5
     ZOOM_FACTOR = 1.25
@@ -62,6 +89,7 @@ class ModuleSceneView(QGraphicsView):
         self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setAcceptDrops(True)
 
         if module is not None:
             self.module = module
@@ -113,10 +141,110 @@ class ModuleSceneView(QGraphicsView):
         else:
             super().mouseReleaseEvent(event)
 
+    def mouseDoubleClickEvent(self, event):
+        """Rename a block by its title, or descend into one with an inside.
+
+        Only hierarchical blocks are opened: inside a code block a double
+        click is an ordinary word selection, which is what the user wants
+        while editing Amaranth source.
+        """
+        item = self.itemAt(event.pos())
+
+        # the title is how a block is named, so double-clicking it renames
+        # rather than descends -- otherwise a hierarchical block's name would
+        # be the one name in the editor that cannot be changed
+        if isinstance(item, NodeTitleItem):
+            item.begin_edit()
+            return
+
+        node_item = self._owning_node_item(item)
+        if node_item is not None and node_item.node.child_module is not None:
+            self.node_activated.emit(node_item.node)
+            return
+
+        super().mouseDoubleClickEvent(event)
+
+    @staticmethod
+    def _owning_node_item(item) -> "NodeGraphicsItem | None":
+        """The node item ``item`` belongs to, walking up from a child item.
+
+        The hit item is usually a socket, the title text or the proxied
+        content widget rather than the node itself.
+        """
+        while item is not None:
+            if isinstance(item, NodeGraphicsItem):
+                return item
+            item = item.parentItem()
+        return None
+
     def mouseMoveEvent(self, event):
         if self._drag.mode is DragMode.EDGE and self._drag.edge_item:
             self._drag.edge_item.end_point = self.mapToScene(event.pos())
+
+        if self._leaving_with_a_node(event):
+            self._start_node_drag()
+            return
+
         super().mouseMoveEvent(event)
+
+    def _leaving_with_a_node(self, event) -> bool:
+        """Whether a node is being dragged out of the canvas entirely."""
+        return (
+            self._drag.mode is DragMode.NODE
+            and bool(event.buttons() & Qt.LeftButton)
+            and not self.viewport().rect().contains(event.pos())
+        )
+
+    def _start_node_drag(self) -> None:
+        """Hand the node to Qt's drag machinery on its way out.
+
+        Up to here the node is being *moved* by the graphics view; once the
+        pointer leaves the canvas it becomes a drag that something else --
+        the block palette -- can accept.
+        """
+        selected = [
+            item.node
+            for item in self.scene().selectedItems()
+            if isinstance(item, NodeGraphicsItem)
+        ]
+        if not selected:
+            self._drag.reset()
+            return
+
+        node = selected[0]
+        self._drag.reset()
+
+        data = QMimeData()
+        data.setData(mime.NODE, node.uuid.encode())
+        data.setText(node.title)
+
+        drag = QDrag(self)
+        drag.setMimeData(data)
+        drag.exec_(Qt.MoveAction)
+
+    # --- blocks dropped in --------------------------------------------------
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(mime.BLOCK):
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat(mime.BLOCK):
+            event.acceptProposedAction()
+            return
+        super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        if not event.mimeData().hasFormat(mime.BLOCK):
+            super().dropEvent(event)
+            return
+
+        block_id = bytes(event.mimeData().data(mime.BLOCK)).decode()
+        event.acceptProposedAction()
+        # where it was dropped, not the middle of the view
+        self.block_dropped.emit(block_id, self.mapToScene(event.pos()))
 
     def _left_button_press(self, event):
         item = self.item_at(event)
@@ -237,8 +365,63 @@ class ModuleSceneView(QGraphicsView):
         super().leaveEvent(event)
 
     def wheelEvent(self, event):
+        """Zoom the canvas, unless the pointer is over something scrollable.
+
+        A code block is an editor with its own scrollbar, and scrolling it is
+        what the wheel is for while the pointer is inside it. Ctrl+wheel still
+        zooms, so there is always a way to zoom out from over a block.
+        """
+        if not event.modifiers() & Qt.ControlModifier and self._scrollable_at(
+            event.pos()
+        ):
+            super().wheelEvent(event)
+            return
+
         delta = event.angleDelta().y()
         self.zoom_in_out(1 if delta > 0 else -1 if delta < 0 else 0)
+
+    def _scrollable_at(self, position) -> bool:
+        """Whether the widget under ``position`` has somewhere to scroll to."""
+        item = self.itemAt(position)
+        while item is not None:
+            if isinstance(item, QGraphicsProxyWidget):
+                return _can_scroll(item.widget())
+            item = item.parentItem()
+        return False
+
+    def fit_contents(self, margin: float = 80.0) -> None:
+        """Frame everything on the canvas.
+
+        Used when a design is first opened -- a file laid out wider than the
+        window would otherwise open showing a corner of itself. Zoom is
+        snapped to one of the discrete steps so that the zoom buttons carry on
+        from somewhere sensible afterwards.
+        """
+        scene = self.scene()
+        if scene is None:
+            return
+
+        contents = scene.itemsBoundingRect()
+        if contents.isEmpty():
+            self._zoom = 0
+            self.zoom_in_out(0)
+            self.centerOn(0, 0)
+            return
+
+        viewport = self.viewport().rect()
+        needed = min(
+            viewport.width() / (contents.width() + margin),
+            viewport.height() / (contents.height() + margin),
+        )
+
+        # the largest step that still fits, so nothing is cropped
+        self._zoom = self.ZOOM_MIN
+        for step in range(self.ZOOM_MIN, self.ZOOM_MAX + 1):
+            if self.ZOOM_FACTOR**step <= needed:
+                self._zoom = step
+
+        self.zoom_in_out(0)
+        self.centerOn(contents.center())
 
     def zoom_in_out(self, steps: int) -> None:
         self._zoom = min(

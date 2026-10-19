@@ -1,0 +1,9 @@
+id: logic.xor2
+label: XOR
+kind: hierarchical
+category: [Logic]
+icon: icons/xor2.svg
+doc: Bitwise exclusive or of two operands.
+params:
+  width_param: {default: 1, dtype: int}
+implementation: xor2.json

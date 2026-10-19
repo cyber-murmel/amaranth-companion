@@ -20,3 +20,14 @@ class GraphicsItem:
         ``QGraphicsItem.scene()`` method with a property.
         """
         return self._element.module.scene
+
+    def apply_theme(self) -> None:
+        """Pick up the colours of the theme that is now active.
+
+        Only items that keep colour *state* need to do anything: the ones that
+        read :func:`~amaranth_companion.theme.current_theme` inside ``paint``
+        just need the repaint the scene triggers anyway. Called by
+        :class:`~amaranth_companion.module.scene.ModuleScene` on a theme
+        change -- graphics items are not ``QObject``s and so cannot safely
+        connect to the signal themselves.
+        """

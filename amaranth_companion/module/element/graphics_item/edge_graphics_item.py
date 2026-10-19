@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt, QPointF
-from PyQt5.QtGui import QPainterPath, QPalette, QPen
+from PyQt5.QtGui import QPainterPath
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsPathItem
 
+from ....theme import current_theme
 from .graphics_item import GraphicsItem
 
 if TYPE_CHECKING:
@@ -11,20 +12,12 @@ if TYPE_CHECKING:
 
 
 class EdgeGraphicsItem(GraphicsItem, QGraphicsPathItem):
-    WIDTH = 2.0
-
     def __init__(self, edge: "Edge | None", parent=None):
         """``edge`` may be ``None``: the scene view uses a detached item as the
         preview curve while an edge is being dragged out of a socket."""
         super().__init__(element=edge, parent=parent)
 
         self._edge = edge
-
-        palette = QPalette()
-        self._pen = QPen(palette.color(QPalette.Light))
-        self._pen_selected = QPen(palette.color(QPalette.Highlight))
-        self._pen.setWidthF(self.WIDTH)
-        self._pen_selected.setWidthF(self.WIDTH)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setZValue(-1)  # draw behind the nodes
@@ -81,8 +74,11 @@ class EdgeGraphicsItem(GraphicsItem, QGraphicsPathItem):
     def paint(self, painter, style_option, widget=None, **kwargs):
         # the drag preview has no edge yet, so it always draws highlighted
         detached = self._edge is None or self._edge.end_socket is None
+        theme = current_theme()
         painter.setPen(
-            self._pen_selected if (detached or self.isSelected()) else self._pen
+            theme.pen_edge_selected
+            if (detached or self.isSelected())
+            else theme.pen_edge
         )
         painter.setBrush(Qt.NoBrush)
         painter.drawPath(self.path())
