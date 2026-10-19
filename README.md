@@ -207,12 +207,17 @@ visibly resizes the ports downstream of it.
 
 ### Panels
 
-Two docks flank the canvas, both switchable under `View -> Panels`.
+Two docks flank the canvas, both switchable under `View -> Panels`. They
+appear with a design and go away with it, since neither has anything to show
+without one; hiding one is remembered across opening and closing designs.
 
 The **Hierarchy** on the left is the whole design at once: the root module and
-every hierarchical block under it, however deep. Clicking a row goes there,
-so a block three levels down is one click rather than three double-clicks. The
-breadcrumb above the canvas still shows the way *in* to where you are.
+every hierarchical block under it, however deep. A block goes by its own title,
+so renaming one renames its row. Clicking a row goes there, so a block three
+levels down is one click rather than three double-clicks.
+
+The path bar above the canvas still shows the way *in* to where you are. It is
+there even at the root, where it is a single entry naming the design.
 
 The **Blocks** palette on the right lists everything the library offers,
 grouped the way the Insert menu groups it. Drag a block onto the canvas to

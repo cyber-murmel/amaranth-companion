@@ -262,3 +262,106 @@ def test_both_docks_can_be_hidden_from_the_menu(gates):
 
     entries["Blocks"].trigger()
     assert not gates._palette.isHidden()
+
+
+def test_the_panels_stay_away_until_a_design_is_open(window):
+    window.show()
+
+    assert window._hierarchy.isHidden()
+    assert window._palette.isHidden()
+
+    window.open_example("logic-gates")
+
+    assert not window._hierarchy.isHidden()
+    assert not window._palette.isHidden()
+
+
+def test_closing_a_design_puts_the_panels_away(gates):
+    gates.show()
+    gates.close_design()
+
+    assert gates._hierarchy.isHidden()
+    assert gates._palette.isHidden()
+
+
+def test_a_hidden_panel_is_still_hidden_after_reopening(gates):
+    """Closing a design must not forget which panels the user wanted."""
+    gates.show()
+    hide = next(a for a in panels_menu(gates).actions() if a.text() == "Hierarchy")
+    hide.trigger()
+
+    gates.close_design()
+    gates.open_example("logic-gates")
+
+    assert gates._hierarchy.isHidden()
+    assert not gates._palette.isHidden()
+
+
+# --- the block's title is its name in the tree ------------------------------
+
+
+def test_renaming_a_block_renames_its_row(gates):
+    gate = next(n for n in gates.current_module.nodes.values() if n.title == "AND")
+
+    gate.graphics_item.commit_title("Gate One")
+
+    labels = [label for label, _item in rows(gates._hierarchy.tree)]
+    assert "Gate One" in labels
+    assert "AND" not in labels
+
+
+def test_an_empty_rename_keeps_the_old_name(gates):
+    gate = next(n for n in gates.current_module.nodes.values() if n.title == "AND")
+
+    gate.graphics_item.commit_title("   ")
+
+    labels = [label for label, _item in rows(gates._hierarchy.tree)]
+    assert "AND" in labels
+
+
+def test_returning_to_a_module_does_not_stack_up_connections(gates):
+    """A module keeps its scene, so the signal would be connected twice."""
+    gate = next(n for n in gates.current_module.nodes.values() if n.title == "OR")
+    gates.enter_node(gate)
+    gates.go_up()
+    gates.enter_node(gate)
+    gates.go_up()
+
+    received = []
+    gates.current_module.scene.node_renamed.connect(received.append)
+    gate.graphics_item.commit_title("Once")
+
+    assert len(received) == 1
+
+
+# --- the path bar -----------------------------------------------------------
+
+
+def test_the_path_is_shown_at_the_root(gates):
+    """It used to appear only once descended, shifting the canvas."""
+    gates.show()
+
+    assert not gates._breadcrumb_bar.isHidden()
+    assert [a.text() for a in gates._breadcrumb_bar.actions()] == [gates.design.name]
+
+
+def test_the_root_entry_is_not_clickable(gates):
+    (entry,) = gates._breadcrumb_bar.actions()
+
+    assert not entry.isEnabled()
+
+
+def test_the_path_grows_on_the_way_in(gates):
+    gate = next(n for n in gates.current_module.nodes.values() if n.title == "XOR")
+    gates.enter_node(gate)
+
+    labels = [a.text() for a in gates._breadcrumb_bar.actions() if a.text()]
+
+    assert labels == [gates.design.name, "XOR"]
+
+
+def test_the_path_goes_away_with_the_design(gates):
+    gates.show()
+    gates.close_design()
+
+    assert gates._breadcrumb_bar.isHidden()

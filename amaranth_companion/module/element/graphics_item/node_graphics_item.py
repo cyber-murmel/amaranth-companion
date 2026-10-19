@@ -225,6 +225,10 @@ class NodeGraphicsItem(GraphicsItem, QGraphicsItem):
         self._node.title = cleaned
         self._node.module.history.check_in()
 
+        scene = self.scene()
+        if scene is not None:
+            scene.node_renamed.emit(self._node)
+
     @property
     def content_widget(self):
         return self._content

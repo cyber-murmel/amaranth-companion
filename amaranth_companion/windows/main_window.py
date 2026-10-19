@@ -222,11 +222,20 @@ class MainWindow(QMainWindow):
                 )
 
     def _build_panels_menu(self, parent: QMenu) -> None:
-        """Show and hide the docks, from the toggles Qt already gives them."""
+        """Show and hide the docks.
+
+        Qt's own ``toggleViewAction`` would have done, but it reports where a
+        dock *is* rather than where the user wants it, and the panels are
+        taken off screen whenever no design is open.
+        """
         submenu = parent.addMenu("&Panels")
-        for dock in (self._hierarchy, self._palette):
-            if dock is not None:
-                submenu.addAction(dock.toggleViewAction())
+        for dock in self._docks:
+            action = submenu.addAction(dock.windowTitle())
+            action.setCheckable(True)
+            action.setChecked(self._panel_wanted[dock])
+            action.toggled.connect(
+                lambda checked, dock=dock: self._set_panel_wanted(dock, checked)
+            )
 
     def _build_boards_menu(self, parent: QMenu) -> None:
         """One entry per platform installed, grouped by the package it came from.
@@ -446,6 +455,7 @@ class MainWindow(QMainWindow):
 
         self._update_breadcrumb()
         self._update_hierarchy()
+        self._update_docks()
         self.setWindowTitle("Amaranth Companion")
 
     def _show_current_module(self) -> None:
@@ -456,8 +466,10 @@ class MainWindow(QMainWindow):
         module = self._design.current_module
         self._scene_view.module = module
         self._connect_content_widgets(module)
+        self._follow_renames(module)
         self._update_breadcrumb()
         self._update_hierarchy()
+        self._update_docks()
         self.setWindowTitle(
             f"{' / '.join(self._design.breadcrumb)} - Amaranth Companion"
         )
@@ -482,6 +494,23 @@ class MainWindow(QMainWindow):
         self._palette.node_discarded.connect(self.discard_node)
         self.addDockWidget(Qt.RightDockWidgetArea, self._palette)
 
+        self._docks = (self._hierarchy, self._palette)
+        # whether the user wants each panel, which is not the same as whether
+        # it is on screen: with no design open there is nothing to show either
+        # of them, but closing a design must not forget the choice
+        self._panel_wanted = {dock: True for dock in self._docks}
+        self._update_docks()
+
+    def _update_docks(self) -> None:
+        """Show the panels only while a design is open."""
+        open_design = self._design is not None
+        for dock in getattr(self, "_docks", ()):
+            dock.setVisible(open_design and self._panel_wanted[dock])
+
+    def _set_panel_wanted(self, dock, wanted: bool) -> None:
+        self._panel_wanted[dock] = wanted
+        self._update_docks()
+
     def go_to_path(self, path) -> None:
         """Jump to any module in the tree, as the hierarchy view offers."""
         if self._design is None or not self._design.go_to_path(path):
@@ -501,6 +530,23 @@ class MainWindow(QMainWindow):
         self._show_current_module()
         self.statusbar.showMessage(f"Deleted {title}", 5000)
 
+    def _follow_renames(self, module) -> None:
+        """Hear about renames in ``module``, without hearing about them twice.
+
+        A module keeps its scene, so coming back to one would otherwise stack
+        up another connection each time.
+        """
+        try:
+            module.scene.node_renamed.disconnect(self._node_renamed)
+        except TypeError:
+            pass
+        module.scene.node_renamed.connect(self._node_renamed)
+
+    def _node_renamed(self, node: Node) -> None:
+        """A block's new title is the name it goes by in the tree."""
+        self._update_hierarchy()
+        self.statusbar.showMessage(f"Renamed to {node.title}", 3000)
+
     def _update_hierarchy(self) -> None:
         if self._hierarchy is not None:
             self._hierarchy.rebuild(self._design)
@@ -516,9 +562,10 @@ class MainWindow(QMainWindow):
             self._breadcrumb_bar.setVisible(False)
             return
 
+        # shown even at the root, where it is one entry naming the design:
+        # a bar that comes and goes shifts the canvas under the pointer
+        self._breadcrumb_bar.setVisible(True)
         labels = self._design.breadcrumb
-        # nothing to navigate at the root, so the bar stays out of the way
-        self._breadcrumb_bar.setVisible(len(labels) > 1)
 
         for depth, label in enumerate(labels):
             if depth:

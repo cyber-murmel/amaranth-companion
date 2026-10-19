@@ -1,6 +1,6 @@
 from math import floor
 
-from PyQt5.QtCore import QLine
+from PyQt5.QtCore import QLine, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsScene
 
 from ..element.graphics_item.graphics_item import GraphicsItem
@@ -9,6 +9,11 @@ from ...theme import current_theme, theme_manager
 
 
 class ModuleScene(QGraphicsScene):
+    #: a node's title was edited; carries the Node. The rename happens deep in
+    #: a graphics item, which is not a QObject and so cannot announce it
+    #: itself; the scene is the nearest thing that can.
+    node_renamed = pyqtSignal(object)
+
     GRID_SIZE = SIZE  # size of unit length
     GRID_STRIDE = STRIDE  # number of unit lengths per macro length
     WIDTH, HEIGHT = 80000, 60000
