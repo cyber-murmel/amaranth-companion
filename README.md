@@ -223,6 +223,13 @@ The **Blocks** palette on the right lists everything the library offers,
 grouped the way the Insert menu groups it. Drag a block onto the canvas to
 place it where you dropped it, or double-click it to place it mid-view.
 
+Two blocks on one canvas never go by the same name. The second AND gate
+numbers them both -- the one already there becomes `AND0` and the newcomer
+`AND1` -- and the next is `AND2`. Numbering only starts on a collision, so a
+lone gate is left reading `AND`, and a gap left by a deletion is filled before
+the count goes on. The number names the instance, not the kind: both gates
+still generate one `class AND`, instantiated as `and0` and `and1`.
+
 Dragging a node *out* of the canvas and onto the palette deletes it --
 putting it back in the box. Dropping it anywhere else does nothing, so a
 design does not lose a block to a slip of the wrist, and the deletion goes

@@ -21,6 +21,7 @@ from amaranth_companion.generate import (
     identifier,
 )
 from amaranth_companion.module.element import Edge
+from amaranth_companion.module.naming import family_name
 from amaranth_companion.module.instantiate import instantiate, refresh_node_ports
 
 
@@ -124,10 +125,16 @@ def test_the_amaranth_import_is_not_repeated(design):
 
 
 def test_identical_blocks_share_one_class(design):
+    """Counting the name is not enough: the duplicate used to be AND_2."""
     design.instantiate(library().require("logic.and2"))
     design.instantiate(library().require("logic.and2"), pos=(400, 0))
 
-    assert generate_source(design).count("class AND(Elaboratable):") == 1
+    source = generate_source(design)
+    classes = [line for line in source.splitlines() if line.startswith("class ")]
+
+    assert source.count("class AND(Elaboratable):") == 1
+    # the gate, the code block inside it, and Top
+    assert len(classes) == 3
 
 
 def test_an_edited_block_gets_its_own_class(design):
@@ -141,7 +148,8 @@ def test_an_edited_block_gets_its_own_class(design):
 
     source = generate_source(design)
     assert source.count("(Elaboratable):") > source.count("class AND(Elaboratable):")
-    assert first.title == second.title  # same label, different implementation
+    # the same kind of block either way; it is the insides that differ
+    assert family_name(first) == family_name(second) == "AND"
 
 
 def test_an_empty_code_block_is_an_error(design):

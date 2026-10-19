@@ -99,7 +99,8 @@ def test_the_tree_follows_an_insertion(gates):
 
     labels = [label for label, _item in rows(gates._hierarchy.tree)]
 
-    assert labels.count("AND") == 2
+    # the second AND numbers them both; see tests/test_naming.py
+    assert {"AND0", "AND1"} <= set(labels)
 
 
 # --- the block palette ------------------------------------------------------

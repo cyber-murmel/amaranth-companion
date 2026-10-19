@@ -25,6 +25,7 @@ from typing import Any, Iterable, Mapping, TYPE_CHECKING
 
 from ..blocks.definition import BlockKind
 from ..blocks.introspect import introspect_cached
+from ..module.naming import family_name
 from ..module.parameters import (
     module_variables,
     resolve_params,
@@ -201,8 +202,23 @@ class DesignGenerator:
     # --- modules -----------------------------------------------------------
 
     def _structure_key(self, module: "Module") -> str:
-        """What makes two implementations the same implementation."""
-        return json.dumps(module.to_dict(versioned=False), sort_keys=True)
+        """What makes two implementations the same implementation.
+
+        Identity is not part of it. Every instance of a block is loaded with
+        fresh uuids, so comparing the documents as they stand would call two
+        copies of the same gate different implementations and emit the class
+        twice. The uuids are numbered off by the order they appear in, which
+        is the order the implementation file lists them in and so the same for
+        every instance.
+        """
+        data = module.to_dict(versioned=False)
+        # insertion order, not sorted: the numbering below is positional, and
+        # sorting by uuid would shuffle two instances differently
+        key = json.dumps(data)
+
+        for index, uuid in enumerate(data.get("nodes", {})):
+            key = key.replace(uuid, f"node{index}")
+        return key
 
     def _emit_module(
         self, module: "Module", preferred: str, *, is_top: bool = False
@@ -254,7 +270,9 @@ class DesignGenerator:
             if node.kind is BlockKind.CODE:
                 emitted = self._emit_code_block(node)
             elif node.kind is BlockKind.HIERARCHICAL and node.child_module is not None:
-                emitted = self._emit_module(node.child_module, node.title)
+                # the class is named after the block, the instance after
+                # this one of it: class AND, instances and0 and and1
+                emitted = self._emit_module(node.child_module, family_name(node))
             else:
                 continue  # port and variable blocks are not submodules
 

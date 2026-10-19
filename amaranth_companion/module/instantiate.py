@@ -31,6 +31,7 @@ from ..blocks.introspect import introspect_cached
 from ..blocks.library import builtin_definition, library
 from .element import Edge, Node
 from .element.graphics_item import content_widget_for
+from .naming import disambiguate
 from .parameters import resolve_params, variable_port_name
 
 if TYPE_CHECKING:
@@ -217,6 +218,9 @@ def instantiate(
     node.set_error(result.error, result.line)
 
     module.add_node(node)
+    if not node.kind.is_port:
+        # a port's title is its name, so it is the name that has to be unique
+        disambiguate(module, node)
     return node
 
 
