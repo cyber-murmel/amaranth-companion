@@ -11,9 +11,11 @@ board's support package is not installed; only ``build`` needs it.
 """
 
 import argparse
+import asyncio
 import importlib
 import shutil
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 #: how a platform is named: ``module:ClassName``
@@ -28,6 +30,19 @@ class PlatformMissing(RuntimeError):
 
 class ToolchainMissing(RuntimeError):
     """The programs needed to build for this platform are not installed."""
+
+
+class ProgrammingFailed(RuntimeError):
+    """The bitstream was built, but could not be loaded onto a board.
+
+    Kept apart from a build failure because the two want different things of
+    the user: one is a design to fix, the other a board to plug in. The
+    bitstream is carried along so it can still be reported.
+    """
+
+    def __init__(self, message: str, bitstream: str = ""):
+        super().__init__(message)
+        self.bitstream = bitstream
 
 
 def load_platform(platform_id: str):
@@ -93,10 +108,107 @@ def build(
             f"building for this board needs {', '.join(absent)} on PATH"
         )
 
-    platform.build(top, name=name, do_program=program, build_dir=build_dir)
+    # built first and loaded on second, rather than asking the platform to do
+    # both in one call: a board that cannot be reached must not cost the
+    # bitstream, which took minutes and is perfectly good
+    products = platform.build(top, name=name, do_program=False, build_dir=build_dir)
+    bitstream = str(Path(build_dir) / _bitstream_name(platform, name))
 
-    bitstream = Path(build_dir) / _bitstream_name(platform, name)
-    return str(bitstream)
+    if program:
+        program_board(platform, products, name, bitstream=bitstream)
+
+    return bitstream
+
+
+def program_board(
+    platform, products, name: str = "top", *, bitstream: str = ""
+) -> None:
+    """Load built products onto an attached board.
+
+    Raises :class:`ProgrammingFailed` for anything that goes wrong, so the
+    caller can tell a board problem from a design problem.
+    """
+    try:
+        with _event_loop():
+            _program(platform, products, name)
+    except Exception as error:
+        raise ProgrammingFailed(
+            f"{type(error).__name__}: {error}", bitstream
+        ) from error
+
+
+@contextmanager
+def _event_loop():
+    """Give ``asyncio.get_event_loop()`` something to find.
+
+    A board programmed over USB is often reached through asyncio, and such a
+    platform asks for the current event loop. Python used to make one on
+    demand; since 3.12 asking without one raises instead, which is not
+    something the platform can be expected to have known. Platforms that
+    shell out to a flashing program are unaffected.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        yield  # already inside a loop; there is nothing to arrange
+        return
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield
+    finally:
+        asyncio.set_event_loop(None)
+        loop.close()
+
+
+def _program(platform, products, name: str) -> None:
+    """Call the platform's programmer, once more if it forgot an import."""
+    try:
+        platform.toolchain_program(products, name)
+    except NameError as error:
+        if not _supply_missing_import(platform, error):
+            raise
+        platform.toolchain_program(products, name)
+
+
+def _supply_missing_import(platform, error: NameError) -> bool:
+    """Supply a module the platform uses but does not import; did it work?
+
+    Not a bug of ours to fix, and not one worth being stopped by either: at
+    the time of writing Glasgow's platform calls ``asyncio.get_event_loop``
+    in a module that never imports ``asyncio``, so programming a board raises
+    ``NameError`` before it reaches the hardware. The name is only supplied
+    when the module really is missing it and it really is importable, and it
+    is said out loud, because the honest fix belongs upstream.
+    """
+    missing = getattr(error, "name", "")
+    owner = next(
+        (
+            klass
+            for klass in type(platform).__mro__
+            if "toolchain_program" in vars(klass)
+        ),
+        None,
+    )
+    module = sys.modules.get(owner.__module__) if owner is not None else None
+
+    if not missing or module is None or hasattr(module, missing):
+        return False
+
+    try:
+        setattr(module, missing, importlib.import_module(missing))
+    except ImportError:
+        return False
+
+    print(
+        f"warning: {module.__name__} uses {missing!r} without importing it; "
+        f"supplying it so the board can be programmed",
+        file=sys.stderr,
+    )
+    return True
 
 
 def _bitstream_name(platform, name: str) -> str:
@@ -160,6 +272,11 @@ def main(construct, name: str = "design", platform_id: str = "", argv=None) -> i
         )
     except (PlatformMissing, ToolchainMissing) as error:
         print(f"cannot build: {error}", file=sys.stderr)
+        return 1
+    except ProgrammingFailed as error:
+        # the bitstream is there either way, and worth saying so
+        print(f"built {error.bitstream}")
+        print(f"could not program the board: {error}", file=sys.stderr)
         return 1
 
     print(f"built {bitstream}")

@@ -431,9 +431,11 @@ class MainWindow(QMainWindow):
 
         result = run_build(self._design, program=program)
 
-        if result.ok:
+        if result.ok and not result.error:
             self.statusbar.showMessage(f"{result.summary} in {result.build_dir}", 20000)
         else:
+            # a bitstream that built but could not be loaded on is a failure
+            # of what was asked for, even though there is a bitstream
             self._report(result.summary, RuntimeError(result.error))
 
     def program_design(self) -> None:

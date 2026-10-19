@@ -50,6 +50,10 @@ class BuildResult:
             return f"Cannot build: {self.error}"
         if not self.ok:
             return f"Build failed: {self.error}"
+        if self.error:
+            # built, but the board could not be reached
+            name = Path(self.bitstream).name
+            return f"Built {name}, but could not program the board: {self.error}"
         if self.programmed:
             return f"Built and programmed {Path(self.bitstream).name}"
         return f"Built {Path(self.bitstream).name}"
@@ -144,7 +148,8 @@ def _run_worker(
         ok=True,
         bitstream=data.get("bitstream", ""),
         build_dir=build_dir,
-        programmed=program,
+        programmed=bool(data.get("programmed", program)),
+        error=data.get("error", ""),
     )
 
 
@@ -160,7 +165,12 @@ def run(
     name: str,
 ) -> dict:
     """Elaborate ``target`` out of ``source`` and build it."""
-    from .hardware import PlatformMissing, ToolchainMissing, build
+    from .hardware import (
+        PlatformMissing,
+        ProgrammingFailed,
+        ToolchainMissing,
+        build,
+    )
 
     namespace: dict[str, Any] = {"__name__": "_amaranth_companion_design"}
 
@@ -184,11 +194,19 @@ def run(
         )
     except (PlatformMissing, ToolchainMissing) as error:
         return {"ok": False, "error": str(error), "unavailable": True}
+    except ProgrammingFailed as error:
+        # the design is fine and the bitstream is written; the board is not
+        return {
+            "ok": True,
+            "bitstream": error.bitstream,
+            "programmed": False,
+            "error": str(error),
+        }
     except Exception as error:
         located = locate(error, "<design>")
         return {"ok": False, "error": located.message, "traceback": located.traceback}
 
-    return {"ok": True, "bitstream": bitstream}
+    return {"ok": True, "bitstream": bitstream, "programmed": program}
 
 
 def main() -> int:

@@ -152,6 +152,25 @@ differently -- `led 0` on the nixpkgs one, `LED0` on git `main`. Either
 spelling works in a block; the generator emits whichever call the installed
 revision needs.
 
+#### Programming
+
+The bitstream is built first and loaded on second, rather than asking the
+platform to do both in one call: a board that cannot be reached must not cost
+a bitstream that took minutes and is perfectly good. A failed program says
+where the bitstream is and what went wrong with the board.
+
+Two things are smoothed over on the way, both in platforms that reach their
+board over USB through asyncio:
+
+- `asyncio.get_event_loop()` used to make a loop on demand and now raises
+  without one, which no platform could have known. A loop is made before the
+  programmer is called.
+- Glasgow's platform, at the time of writing, calls `asyncio.get_event_loop`
+  in a module that never imports `asyncio`, so programming raises `NameError`
+  before reaching the hardware. The name is supplied, with a warning, when the
+  module really is missing it. The honest fix is upstream -- one `import
+  asyncio` in `glasgow/hardware/platform/__init__.py`.
+
 ### Waveforms
 
 `View -> Simulate...` runs the design for a number of clock cycles, writes a

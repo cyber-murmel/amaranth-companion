@@ -6,6 +6,7 @@ dependency, because most boards come from ``amaranth-boards``.
 """
 
 import shutil
+import sys
 
 import pytest
 
@@ -583,3 +584,152 @@ def test_the_generated_call_follows_the_resolved_io(kind, expected):
         DesignGenerator._port_expression(spec, "LED0", platforms.NAMED_PORTS_ATTRIBUTE)
         == expected
     )
+
+
+# --- loading a bitstream onto a board ---------------------------------------
+
+
+FAKE_PLATFORM = '''
+class Platform:
+    """A platform that programs the way Glasgow's does."""
+
+    required_tools = ()
+    calls = 0
+
+    def toolchain_program(self, products, name):
+        type(self).calls += 1
+
+        async def do_program():
+            return products, name
+
+        return asyncio.get_event_loop().run_until_complete(do_program())
+'''
+
+
+def fake_platform_module(name: str, *, import_asyncio: bool):
+    """A module holding a platform, optionally forgetting to import asyncio.
+
+    Glasgow's own revision forgets, which is the case being covered; the
+    module is built here rather than imported so the test does not depend on
+    which revision happens to be installed.
+    """
+    import sys
+    import types
+
+    module = types.ModuleType(name)
+    source = ("import asyncio\n" if import_asyncio else "") + FAKE_PLATFORM
+    exec(compile(source, name, "exec"), module.__dict__)
+    sys.modules[name] = module
+    return module
+
+
+@pytest.fixture
+def forgetful(request):
+    """A platform whose module uses asyncio without importing it."""
+    import sys
+
+    name = f"_fake_platform_{request.node.name}"
+    module = fake_platform_module(name, import_asyncio=False)
+    yield module.Platform()
+    del sys.modules[name]
+
+
+@pytest.fixture
+def careful(request):
+    import sys
+
+    name = f"_fake_careful_{request.node.name}"
+    module = fake_platform_module(name, import_asyncio=True)
+    yield module.Platform()
+    del sys.modules[name]
+
+
+def test_an_event_loop_is_ready_for_the_programmer(careful):
+    """A board reached over USB is reached through asyncio.
+
+    ``get_event_loop`` used to make a loop on demand and now raises instead,
+    which is not something a platform can be expected to have known.
+    """
+    from amaranth_companion.verify.hardware import program_board
+
+    program_board(careful, {"top.bin": b""}, "top")
+
+    assert type(careful).calls == 1
+
+
+def test_a_forgotten_import_is_supplied(forgetful):
+    """Glasgow's platform uses asyncio in a module that never imports it."""
+    from amaranth_companion.verify.hardware import program_board
+
+    program_board(forgetful, {"top.bin": b""}, "top")
+
+    # called twice: once to find out, once after supplying the name
+    assert type(forgetful).calls == 2
+    assert hasattr(sys.modules[type(forgetful).__module__], "asyncio")
+
+
+def test_a_name_that_is_not_a_module_still_fails(careful):
+    from amaranth_companion.verify.hardware import ProgrammingFailed, program_board
+
+    def nonsense(products, name):
+        raise NameError("name 'wat' is not defined", name="wat")
+
+    careful.toolchain_program = nonsense
+
+    with pytest.raises(ProgrammingFailed, match="wat"):
+        program_board(careful, {}, "top")
+
+
+def test_a_programming_failure_keeps_the_bitstream(careful):
+    from amaranth_companion.verify.hardware import ProgrammingFailed, program_board
+
+    def unplugged(products, name):
+        raise FileNotFoundError("no such device")
+
+    careful.toolchain_program = unplugged
+
+    with pytest.raises(ProgrammingFailed) as raised:
+        program_board(careful, {}, "top", bitstream="/tmp/blink.bin")
+
+    assert raised.value.bitstream == "/tmp/blink.bin"
+    assert "FileNotFoundError" in str(raised.value)
+
+
+def test_a_running_loop_is_left_alone(careful):
+    """Nothing to arrange when the caller is already inside a loop."""
+    import asyncio
+
+    from amaranth_companion.verify.hardware import ProgrammingFailed, program_board
+
+    async def inside():
+        # get_event_loop inside a running loop returns the running one, which
+        # cannot be run again -- the point is that we do not replace it
+        with pytest.raises(ProgrammingFailed):
+            program_board(careful, {}, "top")
+
+    asyncio.run(inside())
+
+
+# --- what the editor reports -------------------------------------------------
+
+
+def test_an_unreachable_board_is_reported_as_such():
+    from amaranth_companion.verify.builds import BuildResult
+
+    result = BuildResult(
+        ok=True,
+        bitstream="/tmp/build/blink.bin",
+        programmed=False,
+        error="FileNotFoundError: no such device",
+    )
+
+    assert "Built blink.bin" in result.summary
+    assert "could not program the board" in result.summary
+
+
+def test_a_programmed_board_says_so():
+    from amaranth_companion.verify.builds import BuildResult
+
+    result = BuildResult(ok=True, bitstream="/tmp/build/blink.bin", programmed=True)
+
+    assert result.summary == "Built and programmed blink.bin"
