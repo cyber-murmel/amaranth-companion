@@ -7,6 +7,7 @@ from PyQt5.QtGui import QDrag
 from PyQt5.QtGui import QMouseEvent, QPainter, QTransform
 from PyQt5.QtWidgets import (
     QAbstractScrollArea,
+    QApplication,
     QGraphicsItem,
     QGraphicsProxyWidget,
     QGraphicsTextItem,
@@ -26,16 +27,38 @@ if TYPE_CHECKING:
     from .. import Module, ModuleHistory
 
 
-def _can_scroll(widget) -> bool:
-    """Whether ``widget``, or something inside it, can scroll vertically."""
+def _scroll_area(widget):
+    """``widget``'s scroll area that has somewhere to scroll to, if any."""
     if widget is None:
-        return False
+        return None
 
     areas = widget.findChildren(QAbstractScrollArea)
     if isinstance(widget, QAbstractScrollArea):
         areas = [widget, *areas]
 
-    return any(area.verticalScrollBar().maximum() > 0 for area in areas)
+    for area in areas:
+        if area.verticalScrollBar().maximum() > 0:
+            return area
+    return None
+
+
+def _scroll_by(area, event) -> None:
+    """Scroll ``area`` vertically by what ``event`` asks for.
+
+    Follows what ``QAbstractScrollArea`` would have done: a pixel delta where
+    the device reports one, and ``wheelScrollLines`` lines per notch where it
+    reports steps instead.
+    """
+    bar = area.verticalScrollBar()
+
+    pixels = event.pixelDelta().y()
+    if pixels:
+        bar.setValue(bar.value() - pixels)
+        return
+
+    notches = event.angleDelta().y() / 120
+    lines = QApplication.wheelScrollLines() * bar.singleStep()
+    bar.setValue(bar.value() - round(notches * lines))
 
 
 class DragMode(Enum):
@@ -370,24 +393,32 @@ class ModuleSceneView(QGraphicsView):
         A code block is an editor with its own scrollbar, and scrolling it is
         what the wheel is for while the pointer is inside it. Ctrl+wheel still
         zooms, so there is always a way to zoom out from over a block.
+
+        The editor is scrolled here rather than by handing the event on to
+        ``QGraphicsView``: once the editor reaches its last line it stops
+        accepting the wheel, and the event then fell through to this view's
+        own scrollbars, which slid the canvas and took the block out from
+        under the pointer -- so the next notch of the wheel zoomed. Scrolling
+        at the end of a block now does nothing, which is what the end means.
         """
-        if not event.modifiers() & Qt.ControlModifier and self._scrollable_at(
-            event.pos()
-        ):
-            super().wheelEvent(event)
-            return
+        if not event.modifiers() & Qt.ControlModifier:
+            area = self._scroll_area_at(event.pos())
+            if area is not None:
+                _scroll_by(area, event)
+                event.accept()
+                return
 
         delta = event.angleDelta().y()
         self.zoom_in_out(1 if delta > 0 else -1 if delta < 0 else 0)
 
-    def _scrollable_at(self, position) -> bool:
-        """Whether the widget under ``position`` has somewhere to scroll to."""
+    def _scroll_area_at(self, position):
+        """The scroll area under ``position`` with somewhere to scroll to."""
         item = self.itemAt(position)
         while item is not None:
             if isinstance(item, QGraphicsProxyWidget):
-                return _can_scroll(item.widget())
+                return _scroll_area(item.widget())
             item = item.parentItem()
-        return False
+        return None
 
     def fit_contents(self, margin: float = 80.0) -> None:
         """Frame everything on the canvas.

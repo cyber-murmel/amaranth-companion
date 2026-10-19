@@ -42,13 +42,13 @@ def code(design, view):
     )
 
 
-def wheel(view, scene_pos, modifiers=Qt.NoModifier):
+def wheel(view, scene_pos, modifiers=Qt.NoModifier, delta=-120):
     point = view.mapFromScene(QPointF(*scene_pos))
     return QWheelEvent(
         QPointF(point),
         view.mapToGlobal(point),
-        QPoint(0, -120),
-        QPoint(0, -120),
+        QPoint(0, delta),
+        QPoint(0, delta),
         Qt.NoButton,
         modifiers,
         Qt.NoScrollPhase,
@@ -320,6 +320,66 @@ def test_control_wheel_zooms_even_over_a_block(view, scrollable):
     view.wheelEvent(wheel(view, inside(scrollable), Qt.ControlModifier))
 
     assert view.transform().m11() != before
+
+
+def test_scrolling_past_the_end_does_nothing(view, scrollable):
+    """It used to pan the canvas, which took the block off the pointer."""
+    editor = scrollable.content_widget.editor
+    bar = editor.verticalScrollBar()
+    bar.setValue(bar.maximum())
+    zoom, panned = view.transform().m11(), view.verticalScrollBar().value()
+
+    for _ in range(5):
+        view.wheelEvent(wheel(view, inside(scrollable)))
+
+    assert bar.value() == bar.maximum()
+    assert view.transform().m11() == zoom
+    assert view.verticalScrollBar().value() == panned
+
+
+def test_scrolling_past_the_start_does_nothing(view, scrollable):
+    bar = scrollable.content_widget.editor.verticalScrollBar()
+    bar.setValue(0)
+    zoom, panned = view.transform().m11(), view.verticalScrollBar().value()
+
+    for _ in range(5):
+        view.wheelEvent(wheel(view, inside(scrollable), delta=120))
+
+    assert bar.value() == 0
+    assert view.transform().m11() == zoom
+    assert view.verticalScrollBar().value() == panned
+
+
+def test_the_canvas_does_not_pan_while_a_block_scrolls(view, scrollable):
+    panned = view.verticalScrollBar().value()
+
+    for _ in range(3):
+        view.wheelEvent(wheel(view, inside(scrollable)))
+
+    assert view.verticalScrollBar().value() == panned
+
+
+def test_a_pixel_delta_scrolls_by_pixels(view, scrollable):
+    """Touchpads report pixels rather than notches."""
+    editor = scrollable.content_widget.editor
+    bar = editor.verticalScrollBar()
+    bar.setValue(20)
+
+    point = view.mapFromScene(QPointF(*inside(scrollable)))
+    view.wheelEvent(
+        QWheelEvent(
+            QPointF(point),
+            view.mapToGlobal(point),
+            QPoint(0, -7),
+            QPoint(0, 0),
+            Qt.NoButton,
+            Qt.NoModifier,
+            Qt.NoScrollPhase,
+            False,
+        )
+    )
+
+    assert bar.value() == 27
 
 
 def test_a_block_with_nothing_to_scroll_still_zooms(view, code):
