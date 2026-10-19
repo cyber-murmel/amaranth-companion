@@ -3,7 +3,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt, QEvent, QMimeData, QPointF, pyqtSignal
-from PyQt5.QtGui import QDrag
+from PyQt5.QtGui import QDrag, QWheelEvent
 from PyQt5.QtGui import QMouseEvent, QPainter, QTransform
 from PyQt5.QtWidgets import (
     QAbstractScrollArea,
@@ -45,20 +45,26 @@ def _scroll_area(widget):
 def _scroll_by(area, event) -> None:
     """Scroll ``area`` vertically by what ``event`` asks for.
 
-    Follows what ``QAbstractScrollArea`` would have done: a pixel delta where
-    the device reports one, and ``wheelScrollLines`` lines per notch where it
-    reports steps instead.
+    The event is handed to the scrollbar rather than converted into a value
+    here, because only the scrollbar knows what a notch of the wheel is worth
+    to it: a text editor's measures lines, where the same event measured in
+    pixels would jump a hundred of them at a time. Being given the event
+    directly also means it clamps itself at either end without the event
+    escaping to the canvas behind.
     """
-    bar = area.verticalScrollBar()
-
-    pixels = event.pixelDelta().y()
-    if pixels:
-        bar.setValue(bar.value() - pixels)
-        return
-
-    notches = event.angleDelta().y() / 120
-    lines = QApplication.wheelScrollLines() * bar.singleStep()
-    bar.setValue(bar.value() - round(notches * lines))
+    QApplication.sendEvent(
+        area.verticalScrollBar(),
+        QWheelEvent(
+            QPointF(0, 0),
+            event.globalPosF(),
+            event.pixelDelta(),
+            event.angleDelta(),
+            event.buttons(),
+            event.modifiers(),
+            event.phase(),
+            event.inverted(),
+        ),
+    )
 
 
 class DragMode(Enum):

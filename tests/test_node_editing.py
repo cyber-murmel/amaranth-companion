@@ -4,6 +4,7 @@ import pytest
 
 from PyQt5.QtCore import QEvent, QPoint, QPointF, Qt
 from PyQt5.QtGui import QWheelEvent
+from PyQt5.QtWidgets import QApplication
 
 from amaranth_companion.blocks.library import library
 from amaranth_companion.design import Design
@@ -359,27 +360,42 @@ def test_the_canvas_does_not_pan_while_a_block_scrolls(view, scrollable):
     assert view.verticalScrollBar().value() == panned
 
 
-def test_a_pixel_delta_scrolls_by_pixels(view, scrollable):
-    """Touchpads report pixels rather than notches."""
-    editor = scrollable.content_widget.editor
-    bar = editor.verticalScrollBar()
-    bar.setValue(20)
+def test_a_notch_scrolls_at_the_usual_speed(view, scrollable):
+    """One notch is what it is anywhere else: wheelScrollLines lines.
 
+    A pixel delta rides along on the same event, and taking *that* as the
+    number of lines is how a notch came to jump a hundred of them.
+    """
+    bar = scrollable.content_widget.editor.verticalScrollBar()
+    bar.setValue(0)
+
+    view.wheelEvent(wheel(view, inside(scrollable)))
+
+    assert bar.value() == QApplication.wheelScrollLines() * bar.singleStep()
+
+
+def test_a_high_resolution_wheel_still_moves(view, scrollable):
+    """Free-spinning wheels report a fraction of a notch at a time."""
+    bar = scrollable.content_widget.editor.verticalScrollBar()
+    bar.setValue(0)
     point = view.mapFromScene(QPointF(*inside(scrollable)))
-    view.wheelEvent(
-        QWheelEvent(
-            QPointF(point),
-            view.mapToGlobal(point),
-            QPoint(0, -7),
-            QPoint(0, 0),
-            Qt.NoButton,
-            Qt.NoModifier,
-            Qt.NoScrollPhase,
-            False,
-        )
-    )
 
-    assert bar.value() == 27
+    # eight eighths of a notch add up to one, rather than rounding to nothing
+    for _ in range(8):
+        view.wheelEvent(
+            QWheelEvent(
+                QPointF(point),
+                view.mapToGlobal(point),
+                QPoint(0, -16),
+                QPoint(0, -15),
+                Qt.NoButton,
+                Qt.NoModifier,
+                Qt.ScrollUpdate,
+                False,
+            )
+        )
+
+    assert bar.value() == QApplication.wheelScrollLines() * bar.singleStep()
 
 
 def test_a_block_with_nothing_to_scroll_still_zooms(view, code):
