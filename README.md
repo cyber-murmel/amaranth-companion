@@ -6,7 +6,8 @@ This project is currently still in the early stages of development.
 The current goal is a GNU Radio Companion style block architecture on top of
 amaranth, working towards recreating the
 [blink example](https://github.com/cyber-murmel/amaranth-examples) with
-simulation and formal verification.
+simulation and formal verification. That example now goes the whole way: it
+simulates, proves, builds for a Glasgow, and blinks the LED on one.
 
 - [x] GUI
   - [x] editor
@@ -41,6 +42,7 @@ simulation and formal verification.
   - [x] formal verification as unit tests
   - [x] `python -m <package>` simulates and writes a waveform
   - [x] `python -m <package> build` makes a bitstream
+  - [x] `--program` loads it onto the board (blinks an LED on a Glasgow rev C)
 
 ### Blocks
 
@@ -170,6 +172,21 @@ board over USB through asyncio:
   before reaching the hardware. The name is supplied, with a warning, when the
   module really is missing it. The honest fix is upstream -- one `import
   asyncio` in `glasgow/hardware/platform/__init__.py`.
+
+The board also has to be openable without root, which is a system setting
+rather than anything the editor can arrange. Glasgow ships the rule that does
+it; on NixOS:
+
+```nix
+services.udev.packages = [ pkgs.glasgow ];
+```
+
+Without it the device node stays `root:root`, and Glasgow reports `device not
+found` -- it logs `missing permissions to open device` first and then skips
+the device, so the message you get names the symptom rather than the cause.
+That log line is now carried out of the build worker and into the editor's
+log, which is where to look when a board that is plainly plugged in cannot be
+found.
 
 ### Waveforms
 

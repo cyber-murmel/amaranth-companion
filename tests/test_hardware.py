@@ -733,3 +733,32 @@ def test_a_programmed_board_says_so():
     result = BuildResult(ok=True, bitstream="/tmp/build/blink.bin", programmed=True)
 
     assert result.summary == "Built and programmed blink.bin"
+
+
+def test_the_last_of_what_the_worker_said_is_kept():
+    """Glasgow logs "missing permissions" and then says "device not found"."""
+    from amaranth_companion.verify.builds import _worker_detail
+
+    # synthesis prints pages; programming happens last, so the tail is it
+    stderr = (
+        "".join(f"Info: constant-folding $xor cell {n}\n" for n in range(200))
+        + "Info: Max frequency for clock 'clk': 61.90 MHz\n"
+        + "\n"
+        + "E: g.device: missing permissions to open device 001:087\n"
+        + "glasgow.hardware.device.GlasgowDeviceError: device not found\n"
+    )
+
+    detail = _worker_detail(stderr)
+
+    assert "missing permissions" in detail
+    assert "device not found" in detail
+    # a few lines, not the pages of synthesis output before them
+    assert "constant-folding" not in detail
+    assert len(detail.splitlines()) == 1
+
+
+def test_nothing_printed_is_no_detail():
+    from amaranth_companion.verify.builds import _worker_detail
+
+    assert _worker_detail("") == ""
+    assert _worker_detail("\n  \n") == ""

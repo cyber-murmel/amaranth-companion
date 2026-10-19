@@ -40,6 +40,10 @@ class BuildResult:
     programmed: bool = False
     error: str = ""
     traceback: str = ""
+    #: the last of what the worker printed, which can explain more than the
+    #: exception did: a platform may log the real cause -- "missing
+    #: permissions to open device" -- and then raise something vaguer
+    detail: str = ""
     #: a missing toolchain or board package is worth saying differently from
     #: a design that does not build
     unavailable: bool = False
@@ -108,6 +112,17 @@ def run_build(
     return _run_worker(request, build_dir, program, timeout)
 
 
+def _worker_detail(stderr: str, lines: int = 3) -> str:
+    """The tail of what the worker printed.
+
+    Only looked at when something went wrong. Programming happens last, so
+    the end of a failed run is the part that is about it; synthesis prints
+    pages, and none of them are the answer.
+    """
+    printed = [line.strip() for line in stderr.splitlines() if line.strip()]
+    return " / ".join(printed[-lines:])
+
+
 def _run_worker(
     request: Mapping[str, Any], build_dir: str, program: bool, timeout: float
 ) -> BuildResult:
@@ -142,14 +157,17 @@ def _run_worker(
             traceback=data.get("traceback", ""),
             unavailable=bool(data.get("unavailable")),
             build_dir=build_dir,
+            detail=_worker_detail(completed.stderr),
         )
 
+    error = data.get("error", "")
     return BuildResult(
         ok=True,
         bitstream=data.get("bitstream", ""),
         build_dir=build_dir,
         programmed=bool(data.get("programmed", program)),
-        error=data.get("error", ""),
+        error=error,
+        detail=_worker_detail(completed.stderr) if error else "",
     )
 
 

@@ -433,10 +433,15 @@ class MainWindow(QMainWindow):
 
         if result.ok and not result.error:
             self.statusbar.showMessage(f"{result.summary} in {result.build_dir}", 20000)
-        else:
-            # a bitstream that built but could not be loaded on is a failure
-            # of what was asked for, even though there is a bitstream
-            self._report(result.summary, RuntimeError(result.error))
+            return
+
+        # a bitstream that built but could not be loaded on is a failure of
+        # what was asked for, even though there is a bitstream
+        self._report(result.summary)
+        if result.detail:
+            # the toolchain or the board support package often says more
+            # about this than the exception that reached us did
+            log.warning("the build said: %s", result.detail)
 
     def program_design(self) -> None:
         self.build_design(program=True)
@@ -1100,6 +1105,10 @@ class MainWindow(QMainWindow):
             written.append(name)
         return written
 
-    def _report(self, message: str, error: Exception) -> None:
-        log.warning("%s: %s", message, error)
+    def _report(self, message: str, error: Exception | None = None) -> None:
+        if error is None:
+            # the message already says what went wrong
+            log.warning("%s", message)
+        else:
+            log.warning("%s: %s", message, error)
         self.statusbar.showMessage(message, 5000)
